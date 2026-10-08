@@ -6,7 +6,24 @@ Owner: Abstract (Kelton Hunt), music director and event-technology lead in LaGra
 
 ## Where things stand
 
-`prototype/index.html` is a working single-file prototype. It ran on Claude's artifact platform, which supplied a realtime document store (`claude.use("db")`) and file uploads (`claude.use("assets")`). Those APIs do not exist outside that platform, so the prototype falls back to device-only state when opened locally. Treat it as the product spec: its screens, copy, and behavior are what the real app should do.
+The production app is built: Next.js 16 + Supabase (Postgres, Auth, Realtime, Storage), deployed on Vercel. See README.md for pages and setup.
+
+`prototype/index.html` is the original single-file prototype from Claude's artifact platform. It is the reference for screens, copy and behavior.
+
+## Code map
+
+- `supabase/migrations/` schema, row-level security, `check_in()`, `checkin_info()`, `create_theatre()`, `join_theatre()`, music storage bucket.
+- `supabase/tests/` + `scripts/test-db.sh` access-rule tests on plain Postgres with a small Supabase shim.
+- `src/lib/music.ts` note parsing and range fit (unit-tested in `music.test.ts`).
+- `src/lib/use-production.ts` one hook loads a production's data and keeps it live via Supabase Realtime, polling if the socket drops.
+- `src/app/api/uploads/route.ts` issues performers one-time signed upload URLs (service-role key, server only).
+- `src/app/c/[code]` performer check-in; `src/app/app/...` staff views.
+
+## Next.js 16 notes
+
+- Route params are read on the client with `useParams()` inside `<Suspense>`, because Cache Components prerenders pages by default.
+- `src/proxy.ts` (formerly middleware) refreshes the Supabase session and guards `/app`.
+- Fonts are self-hosted via `@fontsource` packages; the PDF.js worker is copied to `public/` on `npm install`.
 
 ## Views in the prototype
 
@@ -27,7 +44,7 @@ Note names use scientific pitch (middle C = C4). Fit logic lives in `fit()` and 
 - `scores/{auditionerId}`: `{ voice, low, high, belt, rating, notes, callbacks: [roleId], savedAt }`
 - `casting/{roleId}__{auditionerId}`: `{ roleId, auditionerId, status: considering|cast, note, addedAt }`
 
-## What the real build must fix
+## What the production build fixed (from the prototype)
 
 1. **Public check-in.** On the prototype platform only invited Editors could write, so performers couldn't check in from their own phones. The real app needs a per-audition public check-in link (no account) that can only create its own check-in, while staff views require sign-in.
 2. **Audio uploads.** The prototype platform rejected MP3/M4A, so backing tracks were link-only. Support audio uploads with size limits.
