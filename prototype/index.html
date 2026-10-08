@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Audition Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#EDEFF2;--surface:#FFFFFF;--ink:#14171C;--muted:#4A5260;--line:#C9CFD8;--soft:#F4F5F7;
+  --accent:#2340C8;--accent-ink:#FFFFFF;--accent-text:#2340C8;--accent-soft:#E6EAFB;
+  --warn:#9A4A06;--warn-soft:#FFF4E8;--warn-line:#F0C79B;--warn-ink:#5C2D04;--bar:#AEB6C2;
+  --side:#14171C;--side-ink:#FFFFFF;--side-muted:#C4CAD4;--side-card:#262B33;--side-warn:#F0A04B;
+  --display:'Space Grotesk','Helvetica Neue',Helvetica,sans-serif;
+  --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1216;--surface:#191D23;--ink:#ECEFF3;--muted:#A6AEBB;--line:#353C47;--soft:#222831;
+    --accent:#3F5BE8;--accent-ink:#FFFFFF;--accent-text:#9DB0FF;--accent-soft:#1F2A55;
+    --warn:#F0A04B;--warn-soft:#3A2610;--warn-line:#7A4A16;--warn-ink:#FFD8AD;--bar:#5A6372;
+    --side:#0A0C0F;--side-card:#1E232A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1216;--surface:#191D23;--ink:#ECEFF3;--muted:#A6AEBB;--line:#353C47;--soft:#222831;
+  --accent:#3F5BE8;--accent-ink:#FFFFFF;--accent-text:#9DB0FF;--accent-soft:#1F2A55;
+  --warn:#F0A04B;--warn-soft:#3A2610;--warn-line:#7A4A16;--warn-ink:#FFD8AD;--bar:#5A6372;
+  --side:#0A0C0F;--side-card:#1E232A;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+input,select,textarea,button{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.55}
+:focus-visible{outline:3px solid var(--accent-text);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;margin:0}
+a{color:var(--accent-text)}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--side);color:var(--side-ink);padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between}
+.top .show{display:flex;flex-direction:column}
+.top .show small{color:var(--side-muted);font-size:13px}
+.top .show strong{font-family:var(--display);font-size:20px;font-weight:700}
+.tabs{display:flex;gap:4px;background:var(--side-card);padding:4px;border-radius:10px;overflow-x:auto;max-width:100%}
+.tabs button{border:0;background:transparent;color:var(--side-muted);min-height:44px;padding:0 14px;border-radius:8px;white-space:nowrap;font-weight:500}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.banner{margin:12px 20px 0;padding:10px 14px;border-radius:10px;background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn-ink);font-size:15px}
+.banner:empty{display:none}
+main{padding:20px;max-width:1440px;margin:0 auto}
+
+.panel{background:var(--surface);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.narrow{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.lede{margin:0;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.label{font-size:13px;color:var(--muted)}
+.field input,.field select,.field textarea{min-height:44px;border:1px solid var(--line);border-radius:8px;padding:0 12px;background:var(--surface);width:100%}
+.field textarea{padding:10px 12px;resize:vertical}
+.mono{font-family:var(--mono)}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+legend{font-size:13px;color:var(--muted);margin-bottom:6px;padding:0}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:var(--soft);padding:4px;border-radius:10px}
+.seg label{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;border-radius:8px;font-size:14px;padding:4px 6px;cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--surface);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.seg label:has(input:focus-visible){outline:3px solid var(--accent-text)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:22px;font-size:15px;cursor:pointer}
+.chip:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.btn{min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.big{min-height:54px;font-size:17px;padding:0 24px}
+.btn.wide{width:100%}
+.btn.danger{border-color:var(--warn);color:var(--warn)}
+.err{color:var(--warn);font-weight:500;margin:0}
+.err:empty{display:none}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.done-card{text-align:center;align-items:center;padding:40px 20px}
+.done-card .slot{font-family:var(--display);font-size:72px;font-weight:700;line-height:1;color:var(--accent-text)}
+
+/* accompanist */
+.acc{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.queue{background:var(--side);color:var(--side-ink);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.queue h2{font-size:20px;display:flex;justify-content:space-between;align-items:baseline}
+.queue h2 small{font-family:var(--body);font-size:14px;font-weight:400;color:var(--side-muted)}
+.qi{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;cursor:pointer;min-height:44px}
+.qi:focus-visible{outline:3px solid #9DB0FF}
+.qi .tag{font-size:12px;color:var(--side-muted)}
+.qi .who{font-size:16px;font-weight:600}
+.qi .what{font-size:14px;color:var(--side-muted)}
+.qi.now{background:var(--accent)}
+.qi.now .tag,.qi.now .what{color:#E6EAFB}
+.qi.next{background:var(--side-card)}
+.qi.missing{box-shadow:inset 0 0 0 2px var(--side-warn)}
+.qi.missing .tag{color:var(--side-warn)}
+.stage{display:flex;flex-direction:column;gap:16px;min-width:0}
+.stage .who{font-size:15px;color:var(--muted)}
+.stage h2{font-size:clamp(28px,4vw,40px)}
+.stage h2 span{font-weight:500;color:var(--muted);font-size:.6em}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.fact{background:var(--surface);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.fact .v{font-family:var(--mono);font-size:24px;line-height:1.1}
+.fact .btn{min-height:40px;font-size:14px;padding:0 10px;align-self:flex-start}
+.note{background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn-ink);border-radius:10px;padding:10px 14px}
+.music{background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.music img{max-width:100%;border-radius:6px;background:#fff}
+.missing-box{border:2px dashed var(--warn);color:var(--warn);border-radius:10px;padding:18px;font-weight:500}
+.actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end}
+.empty{background:var(--surface);border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+
+/* music director */
+.md{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px;align-items:start}
+.mdlist{background:var(--surface);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.mdlist .li{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:8px;cursor:pointer;min-height:44px;align-items:center}
+.mdlist .li:focus-visible{outline:3px solid var(--accent-text)}
+.mdlist .li[aria-current="true"]{background:var(--accent-soft);font-weight:600}
+.mdlist .li small{font-size:13px;color:var(--muted);font-weight:400}
+.mdlist .li small.cb{color:var(--accent-text);font-weight:600}
+.mdlist .li small.warn{color:var(--warn)}
+.follow{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 8px;font-size:14px}
+.mdgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.fitgrid{display:grid;grid-template-columns:140px minmax(0,1fr) 120px 116px;gap:10px 14px;align-items:center}
+.axis{position:relative;height:18px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.axis span{position:absolute;transform:translateX(-50%)}
+.track{position:relative;height:34px;background:var(--soft);border-radius:6px}
+.track .r{position:absolute;top:8px;height:18px;background:var(--bar);border-radius:4px}
+.track .s{position:absolute;top:3px;height:28px;border:2px solid var(--accent-text);border-radius:6px}
+.fitlabel{font-weight:600;font-size:14px}
+.fit-full{color:var(--accent-text)}
+.fit-part{color:var(--warn)}
+.fit-none{color:var(--muted);font-weight:400}
+.rating{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.rating button{min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.rating button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.cbs{display:flex;flex-direction:column}
+.cbs label{display:flex;align-items:center;gap:10px;min-height:44px}
+.saved{font-size:14px;color:var(--muted)}
+
+/* setup */
+.roles{display:flex;flex-direction:column;gap:10px}
+.rolerow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) 100px 100px 44px;gap:8px;align-items:end;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.rolerow .f-notes{grid-column:1 / -1}
+.iconbtn{width:44px;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);display:grid;place-items:center}
+
+/* welcome */
+.who-list{display:flex;flex-direction:column;gap:10px}
+.who-group{font-size:14px;color:var(--muted);margin:10px 0 0}
+.who-opt{text-align:left;display:flex;flex-direction:column;gap:2px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-height:64px}
+.who-opt strong{font-family:var(--display);font-size:20px}
+.who-opt span{color:var(--muted);font-size:15px}
+.who-opt.lead{border:2px solid var(--accent)}
+.switch{border:1px solid #4A5260;background:transparent;color:var(--side-ink);min-height:44px;padding:0 14px;border-radius:8px}
+.topright{display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:100%}
+/* casting */
+.castgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start}
+.cand{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.cand.is-cast{border:2px solid var(--accent)}
+.cand-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.cand-name{font-weight:600}
+.cand textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);resize:vertical;width:100%}
+.seg2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;background:var(--soft);padding:4px;border-radius:10px}
+.seg2 button{min-height:40px;border:0;border-radius:8px;background:transparent}
+.seg2 button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);font-size:14px;text-decoration:underline;align-self:flex-start;min-height:44px}
+.btn.small{min-height:40px;padding:0 10px;font-size:14px}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text);font-weight:600}
+
+@media (max-width: 900px){
+  .acc,.md,.mdgrid{grid-template-columns:minmax(0,1fr)}
+  .acc .queue{order:2}
+  .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width: 560px){
+  main{padding:14px}
+  .row3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fitgrid{grid-template-columns:minmax(0,1fr) 110px}
+  .fitgrid .track,.fitgrid .axis{grid-column:1 / -1}
+  .fitgrid .axis-spacer{display:none}
+  .fitgrid .btn{grid-column:1 / -1}
+  .rolerow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rolerow .f-name{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="show"><small>Audition room</small><strong id="showTitle">Loading…</strong></div>
+  <div class="topright">
+  <nav class="tabs" aria-label="Views">
+    <button data-view="acc">Accompanist</button>
+    <button data-view="md">Music director</button>
+    <button data-view="cast">Casting</button>
+    <button data-view="setup">Setup</button>
+    <button data-view="checkin">Check-in kiosk</button>
+  </nav>
+  <button class="switch" id="switchBtn" data-act="welcome">Switch role</button>
+  </div>
+</header>
+<p class="banner" id="banner" role="status"></p>
+<main id="main"></main>
+
+<script>
+(function(){
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const VOICES = ['Soprano','Mezzo','Alto','Tenor','Baritone','Bass'];
+
+const S = {
+  config: null, auditioners: [], queue: { currentId: null }, scores: {},
+  view: 'checkin', live: false, connecting: true, canWrite: true, canUpload: true,
+  mdSel: null, mdDirty: false, mdFollow: true, mdLastCurrent: null,
+  setupDirty: false, checkinDone: null, casting: [], mode: null, castPending: false
+};
+S.view = 'welcome';
+try {
+  const md = localStorage.getItem('audition-mode'), v = localStorage.getItem('audition-view');
+  if (md && v) { S.mode = md; S.view = v; }
+} catch (e) {}
+
+let db = null, assets = null, user = null;
+
+/* ---------- note helpers ---------- */
+const PC = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+function midi(n){
+  if (!n) return null;
+  const m = String(n).trim().match(/^([A-Ga-g])\s*([#♯b♭]?)\s*(-?\d)$/);
+  if (!m) return null;
+  let v = PC[m[1].toUpperCase()] + 12 * (parseInt(m[3], 10) + 1);
+  if (m[2] === '#' || m[2] === '♯') v++;
+  if (m[2] === 'b' || m[2] === '♭') v--;
+  return v;
+}
+const AX_LO = 43, AX_HI = 86; // G2 to D6
+const pct = m => Math.max(0, Math.min(100, (m - AX_LO) / (AX_HI - AX_LO) * 100));
+function roleSpec(r){
+  const rng = r.low && r.high ? r.low + ' to ' + r.high : r.high ? 'up to ' + r.high : r.low ? 'down to ' + r.low : '';
+  return [r.voice, rng].filter(Boolean).join(', ');
+}
+function fit(sLo, sHi, rLo, rHi){
+  if (rLo == null && rHi == null) return { cls: 'fit-none', text: 'No range set' };
+  if (sLo == null || sHi == null) return { cls: 'fit-none', text: 'Range not logged' };
+  const lowShort = rLo == null ? 0 : sLo - rLo, highShort = rHi == null ? 0 : rHi - sHi;
+  if (lowShort <= 0 && highShort <= 0) return { cls: 'fit-full', text: 'Full fit' };
+  if ((rLo != null && sHi < rLo) || (rHi != null && sLo > rHi) || lowShort > 4 || highShort > 4) return { cls: 'fit-none', text: 'Not a fit' };
+  if (lowShort > 0 && highShort > 0) return { cls: 'fit-part', text: 'Short both ends' };
+  if (lowShort > 0) return { cls: 'fit-part', text: 'Low end short by ' + lowShort };
+  return { cls: 'fit-part', text: 'Top short by ' + highShort };
+}
+
+/* ---------- audio: starting note and count-in ---------- */
+let actx = null;
+function ctx(){ if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); return actx; }
+function playNote(m){
+  const c = ctx(), t = c.currentTime, f = 440 * Math.pow(2, (m - 69) / 12);
+  [1, 2, 3].forEach((h, i) => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = f * h;
+    const peak = [0.32, 0.08, 0.04][i];
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + 2.05);
+  });
+}
+function countIn(bpm){
+  const c = ctx(), beat = 60 / bpm, t0 = c.currentTime + 0.05;
+  for (let i = 0; i < 4; i++){
+    const o = c.createOscillator(), g = c.createGain(), t = t0 + i * beat;
+    o.frequency.value = i === 0 ? 1600 : 1000;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.1);
+  }
+}
+
+/* ---------- data layer (live db, or this-device fallback) ---------- */
+const api = {
+  async setConfig(c){ if (db) return db.doc('show/config').set(c); S.config = c; onData(); },
+  async addAuditioner(a){
+    if (db) { const ref = await db.collection('auditioners').add(a); return ref.id; }
+    const id = 'a' + Date.now(); S.auditioners.push(Object.assign({ id }, a));
+    S.auditioners.sort((x, y) => x.slot - y.slot); onData(); return id;
+  },
+  async updateAuditioner(id, patch){
+    if (db) return db.doc('auditioners/' + id).update(patch);
+    Object.assign(S.auditioners.find(a => a.id === id) || {}, patch); onData();
+  },
+  async setQueue(q){ if (db) return db.doc('state/queue').set(q); S.queue = q; onData(); },
+  async setScore(id, sc){ if (db) return db.doc('scores/' + id).set(sc); S.scores[id] = sc; onData(); },
+  async setCast(id, c){ if (db) return db.doc('casting/' + id).set(c); S.casting = S.casting.filter(x => x.id !== id).concat([Object.assign({ id }, c)]); onData(); },
+  async updateCast(id, patch){ if (db) return db.doc('casting/' + id).update(patch); Object.assign(S.casting.find(x => x.id === id) || {}, patch); onData(); },
+  async deleteCast(id){ if (db) return db.doc('casting/' + id).delete(); S.casting = S.casting.filter(x => x.id !== id); onData(); },
+  async upload(file){
+    if (assets) { const r = await assets.upload(file); return { id: r.id, type: r.contentType, name: file.name }; }
+    return { local: URL.createObjectURL(file), type: file.type, name: file.name };
+  },
+  async clearAll(){
+    if (db) {
+      for (const a of S.auditioners) { await db.doc('auditioners/' + a.id).delete(); await db.doc('scores/' + a.id).delete(); }
+      for (const c of S.casting) await db.doc('casting/' + c.id).delete();
+      await db.doc('state/queue').set({ currentId: null });
+      return;
+    }
+    S.auditioners = []; S.scores = {}; S.casting = []; S.queue = { currentId: null }; onData();
+  }
+};
+const fileUrl = f => f.id ? '/_blob/' + f.id : f.local;
+
+/* ---------- derived ---------- */
+const roles = () => (S.config && Array.isArray(S.config.roles)) ? S.config.roles : [];
+const byId = id => S.auditioners.find(a => a.id === id) || null;
+function current(){ const a = byId(S.queue && S.queue.currentId); return a && a.status !== 'done' ? a : null; }
+function waiting(){ const cur = current(); return S.auditioners.filter(a => a.status !== 'done' && (!cur || a.id !== cur.id)); }
+function missingMusic(a){ return a.musicType === 'sheet' ? !(a.files && a.files.length) : a.musicType === 'link' ? !a.trackLink : false; }
+function musicLabel(a){ return a.musicType === 'sheet' ? 'sheet music' : a.musicType === 'link' ? 'track link' : 'track on phone'; }
+
+/* ---------- shell ---------- */
+function setView(v){
+  S.view = v;
+  try { if (v !== 'welcome') { localStorage.setItem('audition-view', v); localStorage.setItem('audition-mode', S.mode || 'staff'); } } catch (e) {}
+  mount(); window.scrollTo(0, 0);
+}
+function shell(){
+  $('#showTitle').textContent = (S.config && S.config.title) || 'Untitled show';
+  $$('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === S.view)));
+  const performer = S.mode === 'performer';
+  $('.tabs').hidden = performer || S.view === 'welcome';
+  $('#switchBtn').hidden = S.view === 'welcome';
+  $('#switchBtn').textContent = performer ? 'Not auditioning?' : 'Switch role';
+  let msg = '';
+  if (S.connecting) msg = 'Connecting to live sync…';
+  else if (!S.live) msg = 'Live sync is off in this view, so changes stay on this device only. Open the published link while signed in to sync phones, tablets and laptops.';
+  else if (!S.canWrite) msg = 'Your access to this page is view-only, so you can watch but not check people in or save notes. Ask the owner to make you an Editor.';
+  $('#banner').textContent = msg;
+}
+function mount(){
+  shell();
+  const m = $('#main');
+  if (S.mode === 'performer' && S.view !== 'welcome') S.view = 'checkin';
+  if (S.view === 'welcome') { m.innerHTML = welcomeHTML(); }
+  else if (S.view === 'cast') { renderCast(); }
+  else if (S.view === 'checkin') { m.innerHTML = checkinHTML(); updateCheckin(); }
+  else if (S.view === 'acc') { renderAcc(); }
+  else if (S.view === 'md') { m.innerHTML = mdShellHTML(); S.mdDirty = false; pickMdDefault(); renderMdList(); renderMdDetail(); }
+  else { S.view = 'setup'; m.innerHTML = setupHTML(); S.setupDirty = false; fillSetup(); }
+}
+function onData(){
+  shell();
+  if (S.view === 'checkin') updateCheckin();
+  else if (S.view === 'acc') renderAcc();
+  else if (S.view === 'md') {
+    const cur = current(), curId = cur ? cur.id : null;
+    if (!S.mdDirty) {
+      if (S.mdFollow && curId && curId !== S.mdLastCurrent) S.mdSel = curId;
+      else if (!byId(S.mdSel)) pickMdDefault();
+      S.mdLastCurrent = curId;
+      renderMdDetail();
+    } else renderFit();
+    renderMdList();
+  }
+  else if (S.view === 'cast') {
+    const ae = document.activeElement;
+    if (ae && ae.matches && ae.matches('textarea[data-castnote], select[data-addrole]')) S.castPending = true;
+    else renderCast();
+  }
+  else if (S.view === 'setup' && !S.setupDirty) fillSetup();
+}
+
+/* ---------- welcome ---------- */
+function welcomeHTML(){
+  const team = [
+    ['acc', 'Accompanist', 'See who’s next, with their key, tempo and cut ready.'],
+    ['md', 'Music director', 'Log each singer’s range and see who fits which character.'],
+    ['cast', 'Director', 'Place singers on characters and keep casting notes.'],
+    ['setup', 'Setting up the show', 'Add your characters and the ranges you need for each.']
+  ];
+  return '<div class="narrow"><section class="panel"><h1 style="font-size:30px">Who’s using this device?</h1>' +
+    '<p class="lede">Pick once. You can switch from the top bar any time.</p><div class="who-list">' +
+    '<button class="who-opt lead" data-act="pickrole" data-mode="performer" data-view="checkin"><strong>I’m auditioning</strong><span>Check in and get your music to the pianist.</span></button>' +
+    '<p class="who-group">Audition team</p>' +
+    team.map(o => '<button class="who-opt" data-act="pickrole" data-mode="staff" data-view="' + o[0] + '"><strong>' + o[1] + '</strong><span>' + o[2] + '</span></button>').join('') +
+    '</div></section></div>';
+}
+
+/* ---------- casting board ---------- */
+const castFit = (a, r) => { const sc = S.scores[a.id] || {}; return fit(midi(sc.low), midi(sc.high), midi(r.low), midi(r.high)); };
+const fitRank = f => f.cls === 'fit-full' ? 0 : f.cls === 'fit-part' ? 1 : 2;
+function renderCast(){
+  S.castPending = false;
+  const m = $('#main'), rs = roles();
+  if (!rs.length) {
+    m.innerHTML = '<div class="empty"><h2>Add your characters first</h2><p class="lede">The casting board builds one column per character, with the range you need.</p><button class="btn primary big" data-act="goto" data-view="setup">Set up characters</button></div>';
+    return;
+  }
+  const placed = new Set(S.casting.map(c => c.auditionerId));
+  const cards = rs.map(r => {
+    const cands = S.casting.filter(c => c.roleId === r.id).map(c => ({ c, a: byId(c.auditionerId) })).filter(x => x.a)
+      .sort((x, y) => ((x.c.status === 'cast' ? 0 : 1) - (y.c.status === 'cast' ? 0 : 1)) || (x.a.slot - y.a.slot));
+    const list = cands.map(({ c, a }) => {
+      const f = castFit(a, r), sc = S.scores[a.id] || {};
+      const meta = [sc.voice, sc.low && sc.high ? sc.low + ' to ' + sc.high : '', sc.rating ? 'vocal ' + sc.rating + ' of 5' : ''].filter(Boolean).join(', ');
+      return '<div class="cand' + (c.status === 'cast' ? ' is-cast' : '') + '">' +
+        '<div class="cand-top"><span class="cand-name">' + esc(a.slot) + ' · ' + esc(a.name) + '</span><span class="fitlabel ' + f.cls + '">' + esc(f.text) + '</span></div>' +
+        '<p class="hint">' + esc(meta || 'No vocal notes yet') + '</p>' +
+        '<div class="seg2" role="group" aria-label="Status for ' + esc(a.name) + '">' +
+        '<button data-act="caststatus" data-id="' + esc(c.id) + '" data-s="considering" aria-pressed="' + (c.status !== 'cast') + '"' + (S.canWrite ? '' : ' disabled') + '>Considering</button>' +
+        '<button data-act="caststatus" data-id="' + esc(c.id) + '" data-s="cast" aria-pressed="' + (c.status === 'cast') + '"' + (S.canWrite ? '' : ' disabled') + '>Cast</button></div>' +
+        '<label class="label" for="cn-' + esc(c.id) + '">Notes</label><textarea id="cn-' + esc(c.id) + '" data-castnote="' + esc(c.id) + '" rows="2" placeholder="Acting, chemistry, what to check at callbacks">' + esc(c.note || '') + '</textarea>' +
+        '<button class="linkbtn" data-act="castremove" data-id="' + esc(c.id) + '"' + (S.canWrite ? '' : ' disabled') + '>Take off ' + esc(r.name) + '</button></div>';
+    }).join('');
+    const avail = S.auditioners.filter(a => !S.casting.some(c => c.roleId === r.id && c.auditionerId === a.id))
+      .map(a => ({ a, f: castFit(a, r) })).sort((x, y) => (fitRank(x.f) - fitRank(y.f)) || (x.a.slot - y.a.slot));
+    const add = avail.length ? '<div class="field"><label for="add-' + esc(r.id) + '">Add a singer</label><select id="add-' + esc(r.id) + '" data-addrole="' + esc(r.id) + '"' + (S.canWrite ? '' : ' disabled') + '><option value="">Choose someone</option>' +
+      avail.map(x => '<option value="' + esc(x.a.id) + '">' + esc(x.a.slot + ' · ' + x.a.name + ', ' + x.f.text) + '</option>').join('') + '</select></div>' :
+      (S.auditioners.length ? '' : '<p class="hint">Singers appear here after they check in.</p>');
+    return '<section class="panel"><div><h2 style="font-size:24px">' + esc(r.name) + '</h2><p class="hint" style="margin-top:4px">' + esc(roleSpec(r) || 'No range set') + '</p>' +
+      (r.notes ? '<p style="margin:6px 0 0">' + esc(r.notes) + '</p>' : '') + '</div>' + (list || '<p class="hint">No one placed yet.</p>') + add + '</section>';
+  }).join('');
+  const unplaced = S.auditioners.filter(a => !placed.has(a.id));
+  m.innerHTML = '<div style="display:flex;flex-direction:column;gap:16px"><div><h1 style="font-size:30px">Casting board</h1>' +
+    '<p class="lede">Place singers on characters, mark who you’re casting, and keep notes. One person can sit on several characters. Fit labels come from the ranges logged in the Music director view.</p></div>' +
+    '<div class="castgrid">' + cards + '</div>' +
+    (unplaced.length ? '<section class="panel"><h2 style="font-size:20px">Not placed yet</h2><p style="margin:0">' + unplaced.map(a => esc(a.slot + ' · ' + a.name)).join(', ') + '</p></section>' : '') + '</div>';
+}
+async function toggleConsider(roleId, audId){
+  const id = roleId + '__' + audId;
+  try {
+    if (S.casting.some(c => c.id === id)) await api.deleteCast(id);
+    else await api.setCast(id, { roleId, auditionerId: audId, status: 'considering', note: '', addedAt: new Date().toISOString() });
+  } catch (e) { flash('That change didn’t save. Try again.'); }
+}
+
+/* ---------- check in ---------- */
+function checkinHTML(){
+  if (S.checkinDone) {
+    return '<div class="narrow"><section class="panel done-card"><p class="lede">You’re checked in, ' + esc(S.checkinDone.name) + '.</p>' +
+      '<div class="slot">' + esc(S.checkinDone.slot) + '</div><p class="lede">Your audition number. Listen for it in the hallway.</p>' +
+      '<button class="btn primary big" data-act="ci-again">Check in the next person</button></section></div>';
+  }
+  return '<div class="narrow"><section class="panel">' +
+  '<h1 style="font-size:28px">Check in for your audition</h1>' +
+  '<p class="lede">Tell the pianist what you’re singing and where your cut starts, so your music is ready when you walk in.</p>' +
+  '<form id="ci" novalidate style="display:flex;flex-direction:column;gap:14px">' +
+  '<div class="field"><label for="ci-name">Your name</label><input id="ci-name" autocomplete="name" required></div>' +
+  '<div class="row2"><div class="field"><label for="ci-song">Song title</label><input id="ci-song" required></div>' +
+  '<div class="field"><label for="ci-show">From the show</label><input id="ci-show"></div></div>' +
+  '<fieldset><legend>Music for the pianist</legend><div class="seg">' +
+  '<label><input type="radio" name="ci-type" value="sheet" checked>Sheet music</label>' +
+  '<label><input type="radio" name="ci-type" value="link">Track link</label>' +
+  '<label><input type="radio" name="ci-type" value="phone">Track on my phone</label></div></fieldset>' +
+  '<div id="ci-sheet" style="display:flex;flex-direction:column;gap:12px">' +
+  '<div class="field"><label for="ci-files">Upload your marked music (PDF or photos)</label><input id="ci-files" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" style="padding:8px 12px"><p class="hint" id="ci-upnote">Photos of each page work well on the pianist’s tablet.</p></div>' +
+  '<div class="row2"><div class="field"><label for="ci-start">Cut starts at</label><input id="ci-start" placeholder="m. 42"></div>' +
+  '<div class="field"><label for="ci-end">Cut ends at</label><input id="ci-end" placeholder="m. 58"></div></div></div>' +
+  '<div id="ci-link" hidden><div class="field"><label for="ci-url">Link to your track (Drive, Dropbox, YouTube)</label><input id="ci-url" type="url" inputmode="url" placeholder="https://"></div></div>' +
+  '<div class="row3"><div class="field"><label for="ci-key">Key</label><input id="ci-key" placeholder="E♭ major"></div>' +
+  '<div class="field"><label for="ci-note">First sung note</label><input id="ci-note" class="mono" placeholder="Bb3"></div>' +
+  '<div class="field"><label for="ci-tempo">Tempo (BPM)</label><input id="ci-tempo" class="mono" inputmode="numeric" placeholder="112"></div></div>' +
+  '<div class="field"><label for="ci-msg">Note for the pianist (optional)</label><textarea id="ci-msg" rows="2"></textarea></div>' +
+  '<fieldset id="ci-roles-wrap"><legend>Characters you’d like to be considered for</legend><div class="chips" id="ci-roles"></div></fieldset>' +
+  '<p class="err" id="ci-err" role="alert"></p>' +
+  '<button class="btn primary big wide" type="submit" id="ci-submit">Check in</button>' +
+  '</form></section></div>';
+}
+function updateCheckin(){
+  const wrap = $('#ci-roles'); if (!wrap) return;
+  const checked = new Set($$('input', wrap).filter(i => i.checked).map(i => i.value));
+  const rs = roles();
+  $('#ci-roles-wrap').hidden = !rs.length;
+  wrap.innerHTML = rs.map(r => '<label class="chip"><input type="checkbox" value="' + esc(r.id) + '"' + (checked.has(r.id) ? ' checked' : '') + '>' + esc(r.name) + '</label>').join('') +
+    (rs.length ? '<label class="chip"><input type="checkbox" value="ensemble"' + (checked.has('ensemble') ? ' checked' : '') + '>Ensemble</label>' : '');
+  const blocked = !S.canWrite || S.connecting;
+  $('#ci-submit').disabled = blocked;
+  const up = $('#ci-files');
+  if (S.live && !S.canUpload) { up.disabled = true; $('#ci-upnote').textContent = 'Uploads need Editor access. Bring paper music, or ask the owner for access.'; }
+}
+async function submitCheckin(e){
+  e.preventDefault();
+  const err = $('#ci-err'); err.textContent = '';
+  const name = $('#ci-name').value.trim(), song = $('#ci-song').value.trim();
+  const type = ($('input[name="ci-type"]:checked') || {}).value || 'sheet';
+  if (!name || !song) { err.textContent = 'Add your name and song title to check in.'; return; }
+  const tempo = $('#ci-tempo').value.trim();
+  if (tempo && !(+tempo >= 30 && +tempo <= 300)) { err.textContent = 'Tempo should be a number of beats per minute, like 112.'; return; }
+  const note = $('#ci-note').value.trim();
+  if (note && midi(note) == null) { err.textContent = 'Write the first note like Bb3 or F#4 (letter, sharp or flat, octave number).'; return; }
+  const files = Array.from(($('#ci-files') || {}).files || []);
+  if (type === 'sheet' && files.some(f => f.size > 20 * 1024 * 1024)) { err.textContent = 'Each file must be under 20 MB.'; return; }
+  const btn = $('#ci-submit'); btn.disabled = true;
+  try {
+    const uploaded = [];
+    if (type === 'sheet') {
+      for (let i = 0; i < files.length; i++) { btn.textContent = 'Uploading ' + (i + 1) + ' of ' + files.length + '…'; uploaded.push(await api.upload(files[i])); }
+    }
+    btn.textContent = 'Checking in…';
+    const slot = S.auditioners.reduce((m, a) => Math.max(m, a.slot || 0), 0) + 1;
+    await api.addAuditioner({
+      slot, name, song, show: $('#ci-show').value.trim(), musicType: type,
+      files: uploaded, trackLink: type === 'link' ? $('#ci-url').value.trim() : '',
+      cutStart: $('#ci-start').value.trim(), cutEnd: $('#ci-end').value.trim(),
+      key: $('#ci-key').value.trim(), firstNote: note, tempo: tempo ? +tempo : null,
+      note: $('#ci-msg').value.trim(), roles: $$('#ci-roles input').filter(i => i.checked).map(i => i.value),
+      status: 'waiting', createdAt: new Date().toISOString()
+    });
+    S.checkinDone = { name, slot }; mount(); window.scrollTo(0, 0);
+  } catch (x) {
+    const code = x && x.code;
+    err.textContent = code === 'unsupported_type' ? 'That file type can’t be uploaded. Use a PDF, JPEG or PNG.' :
+      code === 'invalid_argument' ? 'Check-in didn’t save because your access is view-only. Ask the owner for Editor access.' :
+      'Check-in didn’t save. Check your connection and try again.';
+    btn.disabled = false; btn.textContent = 'Check in';
+  }
+}
+
+/* ---------- accompanist ---------- */
+function renderAcc(){
+  const m = $('#main'), cur = current(), wait = waiting();
+  const total = S.auditioners.length, doneN = S.auditioners.filter(a => a.status === 'done').length;
+  const tags = ['Next', 'On deck'];
+  const q = (cur ? [cur] : []).concat(wait);
+  const items = q.map((a, i) => {
+    const isNow = cur && a.id === cur.id, idx = cur ? i - 1 : i;
+    const miss = missingMusic(a);
+    const tag = isNow ? 'Now' : (tags[idx] || 'Waiting');
+    return '<button class="qi' + (isNow ? ' now' : idx === 0 ? ' next' : '') + (miss && !isNow ? ' missing' : '') + '" data-act="call" data-id="' + esc(a.id) + '"' + (isNow ? ' aria-current="true"' : '') + ' aria-label="' + esc(a.slot + ', ' + a.name + (isNow ? ', singing now' : ', call now')) + '">' +
+      '<span class="tag">' + tag + (miss ? ' · no music yet' : '') + '</span><span class="who">' + esc(a.slot) + ' · ' + esc(a.name) + '</span>' +
+      '<span class="what">' + esc(a.song) + ' · ' + musicLabel(a) + '</span></button>';
+  }).join('');
+  const queueHTML = '<aside class="queue" aria-label="Queue"><h2>Queue <small>' + (total ? (doneN + (cur ? 1 : 0)) + ' of ' + total : 'Empty') + '</small></h2>' +
+    (items || '<p style="margin:0;color:var(--side-muted)">Nobody has checked in yet.</p>') + '</aside>';
+  let stage;
+  if (!cur) {
+    const first = wait[0];
+    stage = '<div class="empty"><h2>' + (first ? 'Ready when you are' : 'Waiting for check-ins') + '</h2>' +
+      '<p class="lede">' + (first ? first.slot + ' · ' + esc(first.name) + ' is first in line.' : 'Singers show up here as soon as they check in on their phones.') + '</p>' +
+      (first ? '<button class="btn primary big" data-act="call" data-id="' + esc(first.id) + '"' + (S.canWrite ? '' : ' disabled') + '>Call ' + esc(first.slot) + ' · ' + esc(first.name) + '</button>' : '') + '</div>';
+  } else {
+    const nm = midi(cur.firstNote), next = wait[0];
+    const cut = cur.cutStart || cur.cutEnd ? (cur.cutStart || '?') + ' to ' + (cur.cutEnd || '?') : '—';
+    let music;
+    if (cur.musicType === 'sheet' && cur.files && cur.files.length) {
+      music = cur.files.map((f, i) => /^image\//.test(f.type) ?
+        '<img src="' + esc(fileUrl(f)) + '" alt="Sheet music page ' + (i + 1) + ' for ' + esc(cur.song) + '">' :
+        '<a class="btn primary" style="display:inline-flex;align-items:center;text-decoration:none;width:max-content" href="' + esc(fileUrl(f)) + '" target="_blank" rel="noopener">Open ' + esc(f.name || 'sheet music PDF') + '</a>').join('');
+    } else if (cur.musicType === 'link' && cur.trackLink) {
+      music = '<a class="btn primary" style="display:inline-flex;align-items:center;text-decoration:none;width:max-content" href="' + esc(cur.trackLink) + '" target="_blank" rel="noopener">Open their track</a><p class="hint">' + esc(cur.trackLink) + '</p>';
+    } else if (cur.musicType === 'phone') {
+      music = '<p style="margin:0">Track is on the singer’s phone. Have them plug in at the piano.</p>';
+    } else {
+      music = '<div class="missing-box">No music uploaded. Ask for their book at the door.</div>';
+    }
+    stage = '<div class="stage"><div class="who">' + esc(cur.slot) + ' · ' + esc(cur.name) + '</div>' +
+      '<h2>' + esc(cur.song) + (cur.show ? ' <span>' + esc(cur.show) + '</span>' : '') + '</h2>' +
+      '<div class="facts">' +
+      '<div class="fact"><span class="label">Key</span><span class="v">' + esc(cur.key || '—') + '</span></div>' +
+      '<div class="fact"><span class="label">First note</span><span class="v">' + esc(cur.firstNote || '—') + '</span>' + (nm != null ? '<button class="btn" data-act="pitch" data-m="' + nm + '">Play it</button>' : '') + '</div>' +
+      '<div class="fact"><span class="label">Tempo</span><span class="v">' + (cur.tempo ? esc(cur.tempo) + ' BPM' : '—') + '</span>' + (cur.tempo ? '<button class="btn" data-act="count" data-bpm="' + esc(cur.tempo) + '">Count in</button>' : '') + '</div>' +
+      '<div class="fact"><span class="label">Cut</span><span class="v" style="font-size:20px">' + esc(cut) + '</span></div></div>' +
+      (cur.note ? '<div class="note">Singer’s note: ' + esc(cur.note) + '</div>' : '') +
+      '<section class="music" aria-label="Music">' + music + '</section>' +
+      '<div class="actions"><button class="btn primary big" data-act="done"' + (S.canWrite ? '' : ' disabled') + '>' + (next ? 'Done, call ' + esc(next.slot) + ' · ' + esc(next.name) : 'Done, end of queue') + '</button></div></div>';
+  }
+  m.innerHTML = '<div class="acc">' + queueHTML + stage + '</div>';
+}
+async function callSinger(id){
+  const cur = current();
+  try {
+    if (cur && cur.id !== id) await api.updateAuditioner(cur.id, { status: 'waiting' });
+    await api.updateAuditioner(id, { status: 'singing' });
+    await api.setQueue({ currentId: id });
+  } catch (e) { flash('That change didn’t save. Try again.'); }
+}
+async function doneSinger(){
+  const cur = current(); if (!cur) return;
+  const next = waiting()[0];
+  try {
+    await api.updateAuditioner(cur.id, { status: 'done' });
+    if (next) await api.updateAuditioner(next.id, { status: 'singing' });
+    await api.setQueue({ currentId: next ? next.id : null });
+  } catch (e) { flash('That change didn’t save. Try again.'); }
+}
+
+/* ---------- music director ---------- */
+function mdShellHTML(){
+  return '<div class="md"><div style="display:flex;flex-direction:column;gap:8px"><nav class="mdlist" id="mdlist" aria-label="Auditioners"></nav>' +
+    '<label class="follow"><input type="checkbox" id="md-follow"' + (S.mdFollow ? ' checked' : '') + '> Jump to whoever is singing</label></div>' +
+    '<div id="mddetail"></div></div>';
+}
+function pickMdDefault(){
+  const cur = current();
+  if (cur) { S.mdSel = cur.id; S.mdLastCurrent = cur.id; }
+  else if (!byId(S.mdSel)) S.mdSel = S.auditioners.length ? S.auditioners[S.auditioners.length - 1].id : null;
+}
+function renderMdList(){
+  const el = $('#mdlist'); if (!el) return;
+  const cur = current();
+  if (!S.auditioners.length) { el.innerHTML = '<p class="hint" style="padding:8px">Nobody has checked in yet.</p>'; return; }
+  el.innerHTML = S.auditioners.map(a => {
+    const sc = S.scores[a.id];
+    let st = '<small>Waiting</small>';
+    if (cur && cur.id === a.id) st = '<small class="cb">Singing</small>';
+    else if (sc && sc.callbacks && sc.callbacks.length) st = '<small class="cb">Callback</small>';
+    else if (sc && sc.rating) st = '<small>Rated ' + esc(sc.rating) + '</small>';
+    else if (missingMusic(a) && a.status !== 'done') st = '<small class="warn">No music</small>';
+    else if (a.status === 'done') st = '<small>Sang</small>';
+    return '<button class="li" data-act="mdpick" data-id="' + esc(a.id) + '" aria-current="' + (a.id === S.mdSel) + '"><span>' + esc(a.slot) + ' · ' + esc(a.name) + '</span>' + st + '</button>';
+  }).join('');
+}
+function renderMdDetail(){
+  const el = $('#mddetail'); if (!el) return;
+  const a = byId(S.mdSel);
+  if (!a) { el.innerHTML = '<div class="empty"><h2>No one to score yet</h2><p class="lede">When singers check in, pick one from the list to log their range and notes.</p></div>'; return; }
+  const sc = S.scores[a.id] || {};
+  const rs = roles();
+  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:16px">' +
+    '<div><p class="lede">' + esc(a.slot) + ' · ' + esc(a.song) + (a.show ? ' (' + esc(a.show) + ')' : '') + (a.key ? ' · ' + esc(a.key) : '') + '</p><h2 style="font-size:34px">' + esc(a.name) + '</h2></div>' +
+    '<div class="mdgrid"><div style="display:flex;flex-direction:column;gap:16px;min-width:0">' +
+    '<section class="panel"><div class="row2" style="grid-template-columns:repeat(4,minmax(0,1fr))">' +
+    '<div class="field"><label for="md-voice">Voice type</label><select id="md-voice"><option value="">Not set</option>' + VOICES.map(v => '<option' + (sc.voice === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label for="md-lo">Lowest note</label><input id="md-lo" class="mono" placeholder="G3" value="' + esc(sc.low || '') + '"></div>' +
+    '<div class="field"><label for="md-hi">Highest note</label><input id="md-hi" class="mono" placeholder="E5" value="' + esc(sc.high || '') + '"></div>' +
+    '<div class="field"><label for="md-belt">Belts to</label><input id="md-belt" class="mono" placeholder="D5" value="' + esc(sc.belt || '') + '"></div>' +
+    '</div><p class="err" id="md-rangeerr"></p></section>' +
+    '<section class="panel"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-size:20px">Role fit</h3><span class="hint">Grey bar is the character’s range. Outline is this singer. Consider puts them on the casting board.</span></div><div id="md-fit"></div></section>' +
+    '</div><section class="panel">' +
+    '<h3 style="font-size:20px">Your notes</h3>' +
+    '<div class="field"><span class="label" id="md-rlabel">Vocal rating</span><div class="rating" role="group" aria-labelledby="md-rlabel" id="md-rating">' + [1,2,3,4,5].map(n => '<button type="button" data-act="rate" data-n="' + n + '" aria-pressed="' + (sc.rating === n) + '">' + n + '</button>').join('') + '</div></div>' +
+    '<div class="field"><label for="md-notes">Notes</label><textarea id="md-notes" rows="6">' + esc(sc.notes || '') + '</textarea></div>' +
+    (rs.length ? '<fieldset><legend>Call back for</legend><div class="cbs" id="md-cbs">' + rs.map(r => '<label><input type="checkbox" value="' + esc(r.id) + '"' + ((sc.callbacks || []).includes(r.id) ? ' checked' : '') + '> ' + esc(r.name) + '</label>').join('') + '</div></fieldset>' : '<p class="hint">Add characters in Setup to mark callbacks.</p>') +
+    '<button class="btn primary big wide" data-act="mdsave"' + (S.canWrite ? '' : ' disabled') + '>Save notes</button><span class="saved" id="md-saved" role="status">' + (sc.savedAt ? 'Saved' : '') + '</span>' +
+    '</section></div></div>';
+  S.mdRating = sc.rating || null;
+  renderFit();
+}
+function renderFit(){
+  const el = $('#md-fit'); if (!el) return;
+  const rs = roles(), lo = midi($('#md-lo').value), hi = midi($('#md-hi').value);
+  const bad = ($('#md-lo').value.trim() && lo == null) || ($('#md-hi').value.trim() && hi == null);
+  $('#md-rangeerr').textContent = bad ? 'Write notes like G3, Bb4 or F#5.' : '';
+  if (!rs.length) { el.innerHTML = '<p class="hint">Add the characters you’re casting in Setup to see who fits where.</p>'; return; }
+  const labels = [['C3',48],['C4',60],['C5',72],['C6',84]];
+  let h = '<div class="fitgrid"><span class="axis-spacer"></span><div class="axis" aria-hidden="true">' + labels.map(l => '<span style="left:' + pct(l[1]) + '%">' + l[0] + '</span>').join('') + '</div><span class="axis-spacer"></span><span class="axis-spacer"></span>';
+  rs.forEach(r => {
+    const rl = midi(r.low), rh = midi(r.high), f = fit(lo, hi, rl, rh);
+    const bl = rl != null ? rl : (rh != null ? rh - 12 : null), bh = rh != null ? rh : (rl != null ? rl + 12 : null);
+    const on = S.casting.some(c => c.id === r.id + '__' + S.mdSel);
+    h += '<div style="display:flex;flex-direction:column"><span style="font-weight:600">' + esc(r.name) + '</span><span class="hint">' + esc(roleSpec(r)) + '</span></div>' +
+      '<div class="track" role="img" aria-label="' + esc(r.name + ': ' + f.text) + '">' +
+      (bl != null ? '<div class="r" style="left:' + pct(bl) + '%;width:' + (pct(bh) - pct(bl)) + '%"></div>' : '') +
+      (lo != null && hi != null && hi >= lo ? '<div class="s" style="left:' + pct(lo) + '%;width:' + Math.max(1, pct(hi) - pct(lo)) + '%"></div>' : '') +
+      '</div><span class="fitlabel ' + f.cls + '">' + esc(f.text) + '</span>' +
+      '<button class="btn small" data-act="consider" data-role="' + esc(r.id) + '" data-aud="' + esc(S.mdSel) + '" aria-pressed="' + on + '"' + (S.canWrite ? '' : ' disabled') + '>' + (on ? 'On the board' : 'Consider') + '</button>';
+  });
+  el.innerHTML = h + '</div>';
+}
+async function saveMd(){
+  const a = byId(S.mdSel); if (!a) return;
+  const sc = {
+    voice: $('#md-voice').value, low: $('#md-lo').value.trim(), high: $('#md-hi').value.trim(), belt: $('#md-belt').value.trim(),
+    rating: S.mdRating || null, notes: $('#md-notes').value,
+    callbacks: $$('#md-cbs input').filter(i => i.checked).map(i => i.value), savedAt: new Date().toISOString()
+  };
+  const s = $('#md-saved'); s.textContent = 'Saving…';
+  try { await api.setScore(a.id, sc); S.mdDirty = false; s.textContent = 'Saved'; }
+  catch (e) { s.textContent = 'Not saved. Try again.'; }
+}
+
+/* ---------- setup ---------- */
+function setupHTML(){
+  return '<div class="narrow" style="max-width:820px">' +
+  '<section class="panel"><h1 style="font-size:28px">Set up auditions</h1>' +
+  '<p class="lede">Name the show and list the characters you’re casting, with the range each one needs. Then open this page on each device and pick who’s using it.</p>' +
+  '<div class="field"><label for="su-title">Show and organization</label><input id="su-title" placeholder="LSPA Spring Musical"></div></section>' +
+  '<section class="panel"><h2 style="font-size:22px">Characters</h2><p class="hint">Use note names like G3 or Bb4 (middle C is C4). Fill in only what matters: a top note alone works.</p><div class="roles" id="su-roles"></div>' +
+  '<button class="btn" data-act="addrole" style="align-self:flex-start">Add a character</button>' +
+  '<p class="err" id="su-err" role="alert"></p>' +
+  '<button class="btn primary big" data-act="savesetup"' + (S.canWrite ? '' : ' disabled') + '>Save setup</button><span class="saved" id="su-saved" role="status"></span></section>' +
+  '<section class="panel"><h2 style="font-size:22px">Start over</h2><p class="lede">Clears every check-in, note and casting placement so you can run a fresh session. Characters stay.</p>' +
+  '<button class="btn danger" data-act="clear" style="align-self:flex-start"' + (S.canWrite ? '' : ' disabled') + '>Clear check-ins and notes</button></section></div>';
+}
+function roleRow(r){
+  const id = r.id || ('r' + Math.random().toString(36).slice(2, 9));
+  return '<div class="rolerow" data-id="' + esc(id) + '">' +
+    '<div class="field f-name"><label for="n-' + id + '">Character</label><input id="n-' + id + '" data-k="name" value="' + esc(r.name || '') + '"></div>' +
+    '<div class="field"><label for="v-' + id + '">Voice type</label><select id="v-' + id + '" data-k="voice"><option value="">Any</option>' + VOICES.map(v => '<option' + (r.voice === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label for="l-' + id + '">Lowest note</label><input id="l-' + id + '" class="mono" data-k="low" placeholder="optional" value="' + esc(r.low || '') + '"></div>' +
+    '<div class="field"><label for="h-' + id + '">Top note</label><input id="h-' + id + '" class="mono" data-k="high" placeholder="G4" value="' + esc(r.high || '') + '"></div>' +
+    '<button class="iconbtn" data-act="delrole" aria-label="Remove character"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+    '<div class="field f-notes"><label for="t-' + id + '">What you need (optional)</label><input id="t-' + id + '" data-k="notes" placeholder="Comic timing, strong mover, falsetto ok" value="' + esc(r.notes || '') + '"></div></div>';
+}
+function fillSetup(){
+  const t = $('#su-title'); if (!t) return;
+  t.value = (S.config && S.config.title) || '';
+  const rs = roles();
+  $('#su-roles').innerHTML = rs.length ? rs.map(roleRow).join('') : roleRow({});
+}
+async function saveSetup(){
+  const err = $('#su-err'); err.textContent = '';
+  const rs = $$('#su-roles .rolerow').map(row => {
+    const o = { id: row.dataset.id };
+    $$('[data-k]', row).forEach(i => o[i.dataset.k] = i.value.trim());
+    return o;
+  }).filter(r => r.name);
+  const bad = rs.find(r => (r.low && midi(r.low) == null) || (r.high && midi(r.high) == null));
+  if (bad) { err.textContent = 'Check the range for ' + bad.name + '. Use note names like G3 or Bb4.'; return; }
+  const s = $('#su-saved'); s.textContent = 'Saving…';
+  try { await api.setConfig({ title: $('#su-title').value.trim(), roles: rs, updatedAt: new Date().toISOString() }); S.setupDirty = false; s.textContent = 'Saved'; }
+  catch (e) { s.textContent = 'Not saved. Check your access and try again.'; }
+}
+
+/* ---------- events ---------- */
+let clearArmed = false;
+function flash(t){ const b = $('#banner'); b.textContent = t; }
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.tabs button'); if (tab) { setView(tab.dataset.view); return; }
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const act = b.dataset.act;
+  if (act === 'pickrole') { S.mode = b.dataset.mode; setView(b.dataset.view); }
+  else if (act === 'welcome') { setView('welcome'); }
+  else if (act === 'goto') { setView(b.dataset.view); }
+  else if (act === 'consider') toggleConsider(b.dataset.role, b.dataset.aud);
+  else if (act === 'caststatus') api.updateCast(b.dataset.id, { status: b.dataset.s }).catch(() => flash('That change didn’t save. Try again.'));
+  else if (act === 'castremove') api.deleteCast(b.dataset.id).catch(() => flash('That change didn’t save. Try again.'));
+  else if (act === 'ci-again') { S.checkinDone = null; mount(); }
+  else if (act === 'call') { if (S.canWrite) callSinger(b.dataset.id); }
+  else if (act === 'done') doneSinger();
+  else if (act === 'pitch') playNote(+b.dataset.m);
+  else if (act === 'count') countIn(+b.dataset.bpm);
+  else if (act === 'mdpick') {
+    if (S.mdDirty && b.dataset.id !== S.mdSel) { $('#md-saved').textContent = 'Save or your notes on this singer will be lost. Tap the name again to leave anyway.'; S.mdDirty = false; return; }
+    S.mdSel = b.dataset.id; renderMdList(); renderMdDetail();
+  }
+  else if (act === 'rate') { S.mdRating = +b.dataset.n; S.mdDirty = true; $$('#md-rating button').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.n === S.mdRating))); $('#md-saved').textContent = 'Unsaved changes'; }
+  else if (act === 'mdsave') saveMd();
+  else if (act === 'addrole') { $('#su-roles').insertAdjacentHTML('beforeend', roleRow({})); S.setupDirty = true; }
+  else if (act === 'delrole') { b.closest('.rolerow').remove(); S.setupDirty = true; }
+  else if (act === 'savesetup') saveSetup();
+  else if (act === 'clear') {
+    if (!clearArmed) { clearArmed = true; b.textContent = 'Tap again to clear everything'; setTimeout(() => { clearArmed = false; if (b.isConnected) b.textContent = 'Clear check-ins and notes'; }, 4000); return; }
+    clearArmed = false; b.textContent = 'Clearing…';
+    api.clearAll().then(() => { b.textContent = 'Cleared'; }, () => { b.textContent = 'Not cleared. Try again.'; });
+  }
+});
+document.addEventListener('submit', e => { if (e.target.id === 'ci') submitCheckin(e); });
+document.addEventListener('change', e => {
+  if (e.target.name === 'ci-type') { const v = e.target.value; $('#ci-sheet').hidden = v !== 'sheet'; $('#ci-link').hidden = v !== 'link'; }
+  if (e.target.id === 'md-follow') S.mdFollow = e.target.checked;
+  if (e.target.dataset && e.target.dataset.addrole && e.target.value) {
+    const roleId = e.target.dataset.addrole, audId = e.target.value;
+    e.target.blur();
+    api.setCast(roleId + '__' + audId, { roleId, auditionerId: audId, status: 'considering', note: '', addedAt: new Date().toISOString() }).catch(() => flash('That change didn’t save. Try again.'));
+  }
+  if (e.target.dataset && e.target.dataset.castnote) api.updateCast(e.target.dataset.castnote, { note: e.target.value }).catch(() => flash('Note didn’t save. Try again.'));
+});
+document.addEventListener('focusout', () => { setTimeout(() => { if (S.castPending && S.view === 'cast') { const ae = document.activeElement; if (!(ae && ae.matches && ae.matches('textarea[data-castnote], select[data-addrole]'))) renderCast(); } }, 0); });
+document.addEventListener('input', e => {
+  const id = e.target.id || '';
+  if (id.startsWith('md-') && id !== 'md-follow') { S.mdDirty = true; const s = $('#md-saved'); if (s) s.textContent = 'Unsaved changes'; if (id === 'md-lo' || id === 'md-hi') renderFit(); }
+  if (e.target.closest('#su-roles') || id === 'su-title') S.setupDirty = true;
+});
+
+/* ---------- start ---------- */
+mount();
+(async function init(){
+  const use = n => (window.claude && typeof window.claude.use === 'function') ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+  const got = await Promise.all([use('db'), use('assets'), use('user')]);
+  db = got[0]; assets = got[1]; user = got[2];
+  if (user) { try { const w = await user.can('data.write'); if (w === false) S.canWrite = false; } catch (e) {} }
+  S.canUpload = !!assets;
+  S.connecting = false;
+  if (db) {
+    S.live = true;
+    const fail = () => {};
+    db.doc('show/config').onSnapshot(s => { S.config = s.exists ? s.data() : null; onData(); }, fail);
+    db.collection('auditioners').orderBy('slot').onSnapshot(q => { S.auditioners = q.docs.map(d => Object.assign({ id: d.id }, d.data())); onData(); }, fail);
+    db.doc('state/queue').onSnapshot(s => { S.queue = s.exists ? s.data() : { currentId: null }; onData(); }, fail);
+    db.collection('casting').onSnapshot(q => { S.casting = q.docs.map(d => Object.assign({ id: d.id }, d.data())); onData(); }, fail);
+    db.collection('scores').onSnapshot(q => { const m = {}; q.docs.forEach(d => { m[d.id] = d.data(); }); S.scores = m; onData(); }, fail);
+  }
+  onData();
+})();
+})();
+</script>
+</body>
+</html>
