@@ -5,6 +5,14 @@ import { SUPABASE_PUBLIC_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 // Keeps the staff sign-in fresh and sends signed-out visitors from /app to /login.
 // Performer pages (/, /c/...) never need an account and are not matched here.
 export async function proxy(request: NextRequest) {
+  if (!SUPABASE_URL || !SUPABASE_PUBLIC_KEY) {
+    return new NextResponse(
+      "Audition Room isn’t connected to its database yet. In Vercel, add NEXT_PUBLIC_SUPABASE_URL and " +
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY under Settings → Environment Variables, then redeploy.",
+      { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } },
+    );
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

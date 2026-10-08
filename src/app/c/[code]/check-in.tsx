@@ -28,14 +28,15 @@ export function CheckIn() {
 
   useEffect(() => {
     let alive = true;
-    supabaseBrowser()
-      .rpc("checkin_info", { code })
+    Promise.resolve()
+      .then(() => supabaseBrowser().rpc("checkin_info", { code }))
       .then(({ data, error }) => {
         if (!alive) return;
         if (error) setLoad({ state: "error" });
         else if (!data) setLoad({ state: "missing" });
         else setLoad({ state: "ready", info: data as CheckinInfo });
-      });
+      })
+      .catch(() => alive && setLoad({ state: "error" }));
     return () => {
       alive = false;
     };
