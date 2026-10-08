@@ -14,7 +14,7 @@ export function Setup() {
   const productionId = useParams<{ id: string }>().id;
   const { data, state, live, refresh } = useProduction(productionId);
   return (
-    <ProductionFrame data={data} state={state} live={live} tabs={productionTabs(productionId)}>
+    <ProductionFrame data={data} state={state} live={live} tabs={productionTabs()}>
       {(d) => (
         <div className="medium">
           <TitlePanel d={d} onSaved={refresh} />
@@ -220,7 +220,7 @@ function SessionRow({ s, count, d, onSaved }: { s: Session; count: number; d: Pr
     setArmed(false);
     setMsg("Clearing…");
     const sb = supabaseBrowser();
-    const paths = d.auditioners.filter((a) => a.session_id === s.id).flatMap((a) => a.files.map((f) => f.path));
+    const paths = d.auditioners.filter((a) => a.session_id === s.id).flatMap((a) => [...a.files.map((f) => f.path), a.headshot_path].filter(Boolean));
     if (paths.length) await sb.storage.from("music").remove(paths);
     const { error } = await sb.from("auditioners").delete().eq("session_id", s.id);
     setMsg(error ? "Not cleared. Try again." : "Cleared");

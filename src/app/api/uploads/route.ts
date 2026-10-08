@@ -29,7 +29,8 @@ export async function POST(request: Request) {
   if (!code || files.length === 0) {
     return NextResponse.json({ error: "Send the check-in code and at least one file." }, { status: 400 });
   }
-  if (files.length > MAX_FILES) {
+  // Music files plus one optional headshot.
+  if (files.length > MAX_FILES + 1) {
     return NextResponse.json({ error: `Upload ${MAX_FILES} files or fewer.` }, { status: 400 });
   }
   for (const f of files) {

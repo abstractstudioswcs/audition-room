@@ -44,6 +44,7 @@ export type Auditioner = {
   note: string;
   character_ids: string[];
   status: "waiting" | "singing" | "done";
+  headshot_path: string;
   created_at: string;
 };
 
@@ -56,13 +57,15 @@ export type Score = {
   rating: number | null;
   notes: string;
   callback_ids: string[];
+  acting_rating: number | null;
+  acting_notes: string;
   updated_at: string;
 };
 
 export type Casting = {
   character_id: string;
   auditioner_id: string;
-  status: "considering" | "cast";
+  status: "considering" | "callback" | "cast";
   note: string;
   created_at: string;
 };

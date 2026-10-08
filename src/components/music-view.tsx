@@ -4,19 +4,33 @@ import { useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { MusicFile } from "@/lib/types";
 
-/** Signed, short-lived link to a private music file. */
-function useSignedUrl(path: string) {
-  const [url, setUrl] = useState<string | null>(null);
+const LINK_HOURS = 4;
+const linkCache = new Map<string, { url: string; expires: number }>();
+
+/** Signed, short-lived link to a private file (music or headshot), reused while fresh. */
+export function useSignedUrl(path: string) {
+  const [url, setUrl] = useState<string | null>(() => {
+    const hit = linkCache.get(path);
+    return hit && hit.expires > Date.now() ? hit.url : null;
+  });
   const [failed, setFailed] = useState(false);
   useEffect(() => {
+    if (!path) return;
+    const hit = linkCache.get(path);
+    if (hit && hit.expires > Date.now()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reuse a cached link
+      setUrl(hit.url);
+      return;
+    }
     let alive = true;
     supabaseBrowser()
       .storage.from("music")
-      .createSignedUrl(path, 60 * 60 * 4)
+      .createSignedUrl(path, 60 * 60 * LINK_HOURS)
       .then(({ data, error }) => {
         if (!alive) return;
-        if (error || !data) setFailed(true);
-        else setUrl(data.signedUrl);
+        if (error || !data) return setFailed(true);
+        linkCache.set(path, { url: data.signedUrl, expires: Date.now() + (LINK_HOURS - 0.5) * 3600 * 1000 });
+        setUrl(data.signedUrl);
       });
     return () => {
       alive = false;

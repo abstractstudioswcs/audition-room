@@ -121,6 +121,7 @@ function CheckInForm({
 }) {
   const [musicType, setMusicType] = useState<MusicType>("sheet");
   const [files, setFiles] = useState<File[]>([]);
+  const [headshot, setHeadshot] = useState<File | null>(null);
   const [chars, setChars] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -143,29 +144,36 @@ function CheckInForm({
     if (bad) return setError(musicType === "track" ? `${bad.name} isn’t an audio file. Use MP3, M4A or WAV.` : `${bad.name} isn’t a PDF or photo.`);
     const big = uploading.find((x) => x.size > maxBytesFor(typeOf(x)));
     if (big) return setError(`${big.name} is over ${maxBytesFor(typeOf(big)) / 1024 / 1024} MB.${typeOf(big) === "audio/wav" ? " Trim the WAV to your cut, or export it as MP3." : ""}`);
+    const photoTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+    if (headshot && !photoTypes.includes(typeOf(headshot))) return setError("Your headshot needs to be a photo (JPEG or PNG).");
+    if (headshot && headshot.size > maxBytesFor(typeOf(headshot))) return setError("Your headshot is over 20 MB. Try a smaller photo.");
     const link = val("track_link");
     if (musicType === "link" && link && !/^https?:\/\//i.test(link)) return setError("Track links start with https://");
 
     const supabase = supabaseBrowser();
     try {
       const stored: MusicFile[] = [];
-      if (uploading.length) {
+      let headshotPath = "";
+      // The headshot goes up first, then the music, all through one-time upload links.
+      const all = headshot ? [headshot, ...uploading] : uploading;
+      if (all.length) {
         setBusy("Preparing upload…");
         const res = await fetch("/api/uploads", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ code, files: uploading.map((x) => ({ name: x.name, type: typeOf(x), size: x.size })) }),
+          body: JSON.stringify({ code, files: all.map((x) => ({ name: x.name, type: typeOf(x), size: x.size })) }),
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body.error || "Uploads aren’t available right now.");
         const slots = body.uploads as { path: string; token: string; name: string; type: string }[];
         for (let i = 0; i < slots.length; i++) {
           setBusy(`Uploading ${i + 1} of ${slots.length}…`);
-          const { error: upErr } = await supabase.storage.from("music").uploadToSignedUrl(slots[i].path, slots[i].token, uploading[i], {
+          const { error: upErr } = await supabase.storage.from("music").uploadToSignedUrl(slots[i].path, slots[i].token, all[i], {
             contentType: slots[i].type,
           });
-          if (upErr) throw new Error(`${uploading[i].name} didn’t upload. Check your connection and try again.`);
-          stored.push({ path: slots[i].path, name: slots[i].name, type: slots[i].type });
+          if (upErr) throw new Error(`${all[i].name} didn’t upload. Check your connection and try again.`);
+          if (headshot && i === 0) headshotPath = slots[i].path;
+          else stored.push({ path: slots[i].path, name: slots[i].name, type: slots[i].type });
         }
       }
       setBusy("Checking in…");
@@ -185,9 +193,18 @@ function CheckInForm({
           tempo: tempo || "",
           note: val("note"),
           character_ids: chars,
+          headshot_path: headshotPath,
         },
       });
-      if (ciErr) throw new Error(ciErr.message.includes("closed") ? "Check-in for this session just closed." : "Check-in didn’t save. Try again.");
+      if (ciErr) {
+        const already = ciErr.message.match(/Already checked in as number (\d+)/);
+        if (already) {
+          throw new Error(
+            `You’re already checked in as number ${already[1]}. If something needs changing, tell someone on the audition team.`,
+          );
+        }
+        throw new Error(ciErr.message.includes("closed") ? "Check-in for this session just closed." : "Check-in didn’t save. Try again.");
+      }
       onDone(name, data as number);
     } catch (x) {
       setError(x instanceof Error ? x.message : "Check-in didn’t save. Try again.");
@@ -205,6 +222,12 @@ function CheckInForm({
         <div className="field">
           <label htmlFor="ci-name">Your name</label>
           <input id="ci-name" name="name" autoComplete="name" required maxLength={80} />
+          <p className="hint">Check in once. You can pick every character you’d like to be considered for below.</p>
+        </div>
+        <div className="field">
+          <label htmlFor="ci-headshot">Headshot (optional)</label>
+          <input id="ci-headshot" type="file" accept="image/*" onChange={(e) => setHeadshot(e.target.files?.[0] ?? null)} />
+          <p className="hint">A clear photo of your face helps the team remember who’s who. Take one now or pick one from your photos.</p>
         </div>
         <div className="row2 stack-sm">
           <div className="field">

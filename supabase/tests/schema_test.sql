@@ -52,6 +52,11 @@ select pg_temp.ok(check_in((select v from ids where k = 'code'), jsonb_build_obj
 )) = 1, 'first check-in gets number 1');
 select pg_temp.ok(check_in((select v from ids where k = 'code'), '{"name":"Devon","song":"Santa Fe","music_type":"link","track_link":"https://example.com/t"}') = 2, 'second check-in gets number 2');
 select pg_temp.fails($$select check_in((select v from ids where k = 'code'), '{"name":"X","song":"Y","music_type":"sheet","files":[{"path":"someone-else/f.pdf"}]}')$$, 'upload from another session is rejected');
+select pg_temp.fails($$select check_in((select v from ids where k = 'code'), '{"name":"  maya ","song":"Again","music_type":"phone"}')$$, 'same name cannot check in twice');
+select pg_temp.fails($$select check_in((select v from ids where k = 'code'), '{"name":"Z","song":"Y","music_type":"phone","headshot_path":"elsewhere/me.jpg"}')$$, 'headshot from another session is rejected');
+select pg_temp.ok(check_in((select v from ids where k = 'code'), jsonb_build_object('name', 'Priya   Nair', 'song', 'Astonishing', 'music_type', 'phone',
+  'headshot_path', (select v from ids where k = 'session') || '/h1/me.jpg')) = 3, 'check-in with headshot gets the next number');
+select pg_temp.fails($$select check_in((select v from ids where k = 'code'), '{"name":"PRIYA NAIR","song":"Y","music_type":"phone"}')$$, 'name match ignores case and spacing');
 select pg_temp.fails($$select check_in('not-a-code', '{"name":"X","song":"Y","music_type":"phone"}')$$, 'bad code cannot check in');
 select pg_temp.ok((select count(*) from auditioners) = 0, 'performer cannot read the auditioner list');
 select pg_temp.ok((select count(*) from characters) = 0, 'performer cannot read character details');
@@ -59,7 +64,9 @@ select pg_temp.fails($$insert into auditioners (session_id, slot, name, song, mu
 
 -- Owner sees the check-ins; unknown characters were dropped.
 reset role; set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select pg_temp.ok((select count(*) from auditioners) = 2, 'owner sees both check-ins');
+select pg_temp.ok((select count(*) from auditioners) = 3, 'owner sees every check-in');
+select pg_temp.ok((select name from auditioners where slot = 3) = 'Priya Nair', 'extra spaces in names are tidied');
+select pg_temp.ok((select headshot_path <> '' from auditioners where slot = 3), 'headshot is saved');
 select pg_temp.ok((select cardinality(character_ids) from auditioners where slot = 1) = 1, 'unknown character ids are dropped');
 
 -- Closing check-in blocks performers.
@@ -75,7 +82,13 @@ select pg_temp.ok((select count(*) from auditioners) = 0, 'outsider sees no chec
 select pg_temp.ok((select count(*) from theatres) = 0, 'outsider sees no theatres');
 select pg_temp.fails($$select join_theatre('WRONG123')$$, 'wrong team code is refused');
 select join_theatre((select v from ids where k = 'team'));
-select pg_temp.ok((select count(*) from auditioners) = 2, 'team member sees check-ins after joining');
+select pg_temp.ok((select count(*) from auditioners) = 3, 'team member sees check-ins after joining');
+insert into scores (auditioner_id, low_note, high_note) select id, 'G3', 'E5' from auditioners where slot = 1;
+insert into scores (auditioner_id, acting_rating, acting_notes) select id, 4, 'Great read' from auditioners where slot = 1
+  on conflict (auditioner_id) do update set acting_rating = excluded.acting_rating, acting_notes = excluded.acting_notes;
+select pg_temp.ok((select low_note = 'G3' and acting_rating = 4 from scores), 'acting notes save without wiping vocal notes');
+delete from auditioners where slot = 2;
+select pg_temp.ok((select count(*) from auditioners) = 2, 'team member can remove a stray check-in');
 update sessions set current_auditioner_id = (select id from auditioners where slot = 1);
 select pg_temp.ok((select current_auditioner_id is not null from sessions), 'team member can run the queue');
 update theatres set name = 'Hijacked';
@@ -106,5 +119,8 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 insert into castings (character_id, auditioner_id)
   select (select v::uuid from ids where k = 'andy'), id from auditioners where slot = 1;
 select pg_temp.ok((select count(*) from castings) = 1, 'owner can place a singer on a character');
+update castings set status = 'callback';
+select pg_temp.ok((select status from castings) = 'callback', 'a singer can be marked for callback');
+select pg_temp.fails($$update castings set status = 'maybe'$$, 'unknown casting status is refused');
 
 \echo 'all schema tests passed'

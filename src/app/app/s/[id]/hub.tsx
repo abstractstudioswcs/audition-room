@@ -36,14 +36,17 @@ export function SessionHub() {
       data={data}
       state={missing ? "missing" : state}
       live={live}
-      tabs={productionId ? sessionTabs(sessionId, productionId) : []}
+      tabs={sessionTabs(sessionId)}
     >
       {(d) => {
         const session = d.sessions.find((s) => s.id === sessionId)!;
+        const s = `/app/s/${sessionId}`;
         const options = [
-          { role: "accompanist", href: `/app/s/${sessionId}/accompanist`, title: "Accompanist", body: "See who’s next, with their key, tempo, cut and music ready." },
-          { role: "music-director", href: `/app/s/${sessionId}/music-director`, title: "Music director", body: "Log each singer’s range and see who fits which character." },
-          { role: "director", href: `/app/p/${d.production.id}/cast`, title: "Director", body: "Place singers on characters and keep casting notes." },
+          { role: "overview", href: `${s}/overview`, title: "Stage manager", body: "See every singer’s progress: check-in, the room, vocal, acting and casting." },
+          { role: "accompanist", href: `${s}/accompanist`, title: "Accompanist", body: "See who’s next and preview their music, key, tempo and cut." },
+          { role: "music-director", href: `${s}/music-director`, title: "Music director", body: "Log range and vocal notes, and see who fits which character." },
+          { role: "acting", href: `${s}/acting`, title: "Director: acting", body: "Rate the read, take notes and place singers on characters." },
+          { role: "director", href: `/app/p/${d.production.id}/cast`, title: "Director: casting", body: "Compare everyone on each character and mark who’s cast." },
           { role: "setup", href: `/app/p/${d.production.id}`, title: "Setting up the show", body: "Characters, ranges, sessions and check-in links." },
         ];
         return (
@@ -51,7 +54,7 @@ export function SessionHub() {
             <section className="panel">
               <p className="hint">{session.name}</p>
               <h1 style={{ fontSize: 30 }}>Who’s using this device?</h1>
-              <p className="lede">Pick a view. You can switch from the top bar any time.</p>
+              <p className="lede">Pick a view. Everyone on the team can open every view from the tabs at the top.</p>
               <div className="who-list">
                 <a className="who-opt lead" href={`/c/${session.checkin_code}`} onClick={() => rememberRole("kiosk")}>
                   <strong>Check-in kiosk</strong>

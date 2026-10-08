@@ -4,9 +4,9 @@ Run musical auditions from three devices: performers check in on their phones, t
 
 ## How it works
 
-- **Performers** need no account. They open the session's check-in link (or scan its QR code), upload sheet music or a backing track, and get an audition number.
+- **Performers** need no account. They open the session's check-in link (or scan its QR code), add an optional headshot, upload sheet music or a backing track, and get an audition number. Each name checks in once per session.
 - **The audition team** signs in. The theatre owner shares a team code so the accompanist and director can join.
-- **Each device picks a view**: check-in kiosk, accompanist, music director, director (casting board) or setup.
+- **Every team member can open every stage**: Overview, Accompanist, Vocal, Acting, Casting and Setup. The flow runs check-in → vocal → acting → casting.
 - Everything stays in sync live across devices.
 
 ## Pages
@@ -18,10 +18,12 @@ Run musical auditions from three devices: performers check in on their phones, t
 | `/login` | Team | Sign in or create an account |
 | `/app` | Team | Theatres, team codes, productions |
 | `/app/p/<id>` | Team | Setup: characters with ranges, audition sessions, check-in links and QR codes |
-| `/app/p/<id>/cast` | Director | Casting board |
+| `/app/p/<id>/cast` | Director | Casting board: Considering, Callback, Cast |
 | `/app/s/<id>` | Team | Pick this device’s view |
-| `/app/s/<id>/accompanist` | Pianist | Live queue, key, first note, tempo, cut, music |
-| `/app/s/<id>/music-director` | MD | Range, role fit, rating, notes, callbacks |
+| `/app/s/<id>/overview` | Stage manager | Every singer’s progress: check-in, room, vocal, acting, casting |
+| `/app/s/<id>/accompanist` | Pianist | Live queue, preview anyone’s music, key, first note, tempo, cut |
+| `/app/s/<id>/music-director` | MD (Vocal) | Range, character fit, vocal rating and notes, callbacks, their music |
+| `/app/s/<id>/acting` | Director (Acting) | Acting rating and notes, place singers on characters |
 
 ## Set up
 

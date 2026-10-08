@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { Headshot } from "@/components/headshot";
 import { MusicFiles } from "@/components/music-view";
 import { ProductionFrame, sessionTabs } from "@/components/production-frame";
 import { countIn, playNote } from "@/lib/audio";
@@ -19,7 +20,7 @@ export function Accompanist() {
       data={data}
       state={missing ? "missing" : state}
       live={live}
-      tabs={productionId ? sessionTabs(sessionId, productionId) : []}
+      tabs={sessionTabs(sessionId)}
     >
       {(d) => {
         const session = d.sessions.find((s) => s.id === sessionId);
@@ -33,12 +34,14 @@ export function Accompanist() {
 function Room({ d, session, refresh }: { d: ProductionData; session: Session; refresh: () => void }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null); // previewing someone who isn't singing yet
   const mine = d.auditioners.filter((a) => a.session_id === session.id);
   const currentRaw = mine.find((a) => a.id === session.current_auditioner_id);
   const current = currentRaw && currentRaw.status !== "done" ? currentRaw : null;
   const waiting = mine.filter((a) => a.status !== "done" && a.id !== current?.id);
   const finished = mine.filter((a) => a.status === "done");
   const next = waiting[0];
+  const previewed = viewing && viewing !== current?.id ? mine.find((a) => a.id === viewing) ?? null : null;
 
   async function run(steps: Array<() => PromiseLike<{ error: unknown }>>) {
     setBusy(true);
@@ -60,10 +63,12 @@ function Room({ d, session, refresh }: { d: ProductionData; session: Session; re
 
   const call = (id: string) => {
     if (busy || id === current?.id) return;
+    setViewing(null);
     run([...(current ? [setStatus(current.id, "waiting")] : []), setStatus(id, "singing"), setCurrent(id)]);
   };
   const done = () => {
     if (!current) return;
+    setViewing(null);
     run([setStatus(current.id, "done"), ...(next ? [setStatus(next.id, "singing")] : []), setCurrent(next?.id ?? null)]);
   };
 
@@ -81,12 +86,18 @@ function Room({ d, session, refresh }: { d: ProductionData; session: Session; re
           const isNow = a.id === current?.id;
           const idx = current ? i - 1 : i;
           const miss = missingMusic(a);
+          const looking = previewed?.id === a.id;
           const cls = ["qi", isNow ? "now" : idx === 0 ? "next" : "", miss && !isNow ? "missing" : ""].join(" ");
           return (
-            <button key={a.id} className={cls} onClick={() => call(a.id)} aria-current={isNow ? "true" : undefined}
-              aria-label={`${a.slot}, ${a.name}${isNow ? ", singing now" : ", call now"}`}>
-              <span className="tag">{isNow ? "Now" : tags[idx] ?? "Waiting"}{miss ? " · no music yet" : ""}</span>
-              <span className="who">{a.slot} · {a.name}</span>
+            <button key={a.id} className={cls} onClick={() => setViewing(isNow ? null : a.id)}
+              aria-current={isNow ? "true" : undefined} aria-pressed={looking}
+              style={looking ? { outline: "3px solid #9DB0FF", outlineOffset: -3 } : undefined}
+              aria-label={`${a.slot}, ${a.name}${isNow ? ", singing now" : ", preview their music"}`}>
+              <span className="tag">{isNow ? "Now" : tags[idx] ?? "Waiting"}{miss ? " · no music yet" : ""}{looking ? " · previewing" : ""}</span>
+              <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Headshot path={a.headshot_path} name={a.name} size={28} />
+                <span className="who">{a.slot} · {a.name}</span>
+              </span>
               <span className="what">{a.song} · {MUSIC_LABEL[a.music_type]}</span>
             </button>
           );
@@ -97,9 +108,9 @@ function Room({ d, session, refresh }: { d: ProductionData; session: Session; re
               Already sang ({finished.length})
             </summary>
             {finished.map((a) => (
-              <button key={a.id} className="qi" onClick={() => call(a.id)} aria-label={`${a.slot}, ${a.name}, call back`}>
+              <button key={a.id} className="qi" onClick={() => setViewing(a.id)} aria-label={`${a.slot}, ${a.name}, open to call back`}>
                 <span className="who">{a.slot} · {a.name}</span>
-                <span className="what">Tap to call back</span>
+                <span className="what">Tap to see their music or call back</span>
               </button>
             ))}
           </details>
@@ -108,7 +119,17 @@ function Room({ d, session, refresh }: { d: ProductionData; session: Session; re
 
       <div className="stage">
         {error && <p className="banner" style={{ margin: 0 }} role="alert">{error}</p>}
-        {!current ? (
+        <p className="hint">Tap anyone in the queue to look over their music before you call them.</p>
+        {previewed ? (
+          <Singer
+            a={previewed}
+            preview
+            busy={busy}
+            onCall={() => call(previewed.id)}
+            onBack={() => setViewing(null)}
+            backLabel={current ? `Back to ${current.slot} · ${current.name}` : "Close preview"}
+          />
+        ) : !current ? (
           <div className="empty">
             <h2>{next ? "Ready when you are" : "Waiting for check-ins"}</h2>
             <p className="lede">
@@ -128,15 +149,47 @@ function Room({ d, session, refresh }: { d: ProductionData; session: Session; re
   );
 }
 
-function Singer({ a, next, busy, onDone }: { a: Auditioner; next?: Auditioner; busy: boolean; onDone: () => void }) {
+function Singer({
+  a,
+  next,
+  busy,
+  onDone,
+  preview = false,
+  onCall,
+  onBack,
+  backLabel,
+}: {
+  a: Auditioner;
+  next?: Auditioner;
+  busy: boolean;
+  onDone?: () => void;
+  preview?: boolean;
+  onCall?: () => void;
+  onBack?: () => void;
+  backLabel?: string;
+}) {
   const note = midi(a.first_note);
   const cut = a.cut_start || a.cut_end ? `${a.cut_start || "?"} to ${a.cut_end || "?"}` : "—";
   return (
     <>
-      <div className="who">{a.slot} · {a.name}</div>
-      <h2>
-        {a.song} {a.show && <span>{a.show}</span>}
-      </h2>
+      {preview && (
+        <div className="note" style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
+          <span>Previewing {a.slot} · {a.name}. They haven’t been called yet.</span>
+          <span className="inline">
+            <button className="btn" onClick={onBack}>{backLabel}</button>
+            <button className="btn primary" disabled={busy} onClick={onCall}>Call {a.name} now</button>
+          </span>
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+        <Headshot path={a.headshot_path} name={a.name} size={72} />
+        <div style={{ minWidth: 0 }}>
+          <div className="who">{a.slot} · {a.name}</div>
+          <h2>
+            {a.song} {a.show && <span>{a.show}</span>}
+          </h2>
+        </div>
+      </div>
       <div className="facts">
         <div className="fact">
           <span className="label">Key</span>
@@ -170,9 +223,13 @@ function Singer({ a, next, busy, onDone }: { a: Auditioner; next?: Auditioner; b
         {missingMusic(a) && <div className="missing-box">No music uploaded. Ask for their book at the door.</div>}
       </section>
       <div className="actions">
-        <button className="btn primary big" disabled={busy} onClick={onDone}>
-          {next ? `Done, call ${next.slot} · ${next.name}` : "Done, end of queue"}
-        </button>
+        {preview ? (
+          <button className="btn primary big" disabled={busy} onClick={onCall}>Call {a.slot} · {a.name} now</button>
+        ) : (
+          <button className="btn primary big" disabled={busy} onClick={onDone}>
+            {next ? `Done, call ${next.slot} · ${next.name}` : "Done, end of queue"}
+          </button>
+        )}
       </div>
     </>
   );

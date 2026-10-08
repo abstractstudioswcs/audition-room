@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Headshot } from "@/components/headshot";
 import { ProductionFrame, productionTabs } from "@/components/production-frame";
 import { fitNotes, fitRank, roleSpec } from "@/lib/music";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -13,11 +14,13 @@ export function CastingBoard() {
   const productionId = useParams<{ id: string }>().id;
   const { data, state, live, refresh } = useProduction(productionId);
   return (
-    <ProductionFrame data={data} state={state} live={live} tabs={productionTabs(productionId)}>
+    <ProductionFrame data={data} state={state} live={live} tabs={productionTabs()}>
       {(d) => <Board d={d} refresh={refresh} />}
     </ProductionFrame>
   );
 }
+
+const STATUS_ORDER: Record<Casting["status"], number> = { cast: 0, callback: 1, considering: 2 };
 
 function Board({ d, refresh }: { d: ProductionData; refresh: () => void }) {
   const [error, setError] = useState("");
@@ -64,7 +67,7 @@ function Board({ d, refresh }: { d: ProductionData; refresh: () => void }) {
             .filter((x) => x.character_id === c.id)
             .map((x) => ({ x, a: d.auditioners.find((a) => a.id === x.auditioner_id) }))
             .filter((y): y is { x: Casting; a: Auditioner } => !!y.a)
-            .sort((p, q) => (p.x.status === "cast" ? 0 : 1) - (q.x.status === "cast" ? 0 : 1) || p.a.slot - q.a.slot);
+            .sort((p, q) => STATUS_ORDER[p.x.status] - STATUS_ORDER[q.x.status] || p.a.slot - q.a.slot);
           const avail = d.auditioners
             .filter((a) => !d.castings.some((x) => x.character_id === c.id && x.auditioner_id === a.id))
             .map((a) => ({ a, f: fitFor(a, c) }))
@@ -79,32 +82,45 @@ function Board({ d, refresh }: { d: ProductionData; refresh: () => void }) {
               {cands.length === 0 && <p className="hint">No one placed yet.</p>}
               {cands.map(({ x, a }) => {
                 const f = fitFor(a, c), sc = d.scores[a.id];
-                const meta = [
+                const vocal = [
                   sc?.voice,
                   sc?.low_note && sc?.high_note ? `${sc.low_note} to ${sc.high_note}` : "",
                   sc?.rating ? `vocal ${sc.rating} of 5` : "",
-                  sessionName(a),
                 ].filter(Boolean).join(", ");
+                const acting = sc?.acting_rating ? `acting ${sc.acting_rating} of 5` : "";
                 const key = { character_id: c.id, auditioner_id: a.id };
                 return (
                   <div className={`cand${x.status === "cast" ? " is-cast" : ""}`} key={a.id}>
-                    <div className="cand-top">
-                      <span className="cand-name">{a.slot} · {a.name}</span>
-                      <span className={`fitlabel fit-${f.kind}`}>{f.text}</span>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <Headshot path={a.headshot_path} name={a.name} size={56} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div className="cand-top">
+                          <span className="cand-name">{a.slot} · {a.name}</span>
+                          <span className={`fitlabel fit-${f.kind}`}>{f.text}</span>
+                        </div>
+                        <p className="hint">{vocal || "No vocal notes yet"}</p>
+                        <p className="hint">{[acting || "No acting notes yet", sessionName(a)].filter(Boolean).join(" · ")}</p>
+                      </div>
                     </div>
-                    <p className="hint">{meta || "No vocal notes yet"}</p>
-                    <div className="seg2" role="group" aria-label={`Status for ${a.name}`}>
-                      {(["considering", "cast"] as const).map((s) => (
+                    {(sc?.notes || sc?.acting_notes) && (
+                      <details>
+                        <summary className="hint" style={{ cursor: "pointer", minHeight: 32 }}>Vocal and acting notes</summary>
+                        {sc?.notes && <p style={{ whiteSpace: "pre-wrap", marginTop: 6 }}><strong>Vocal:</strong> {sc.notes}</p>}
+                        {sc?.acting_notes && <p style={{ whiteSpace: "pre-wrap", marginTop: 6 }}><strong>Acting:</strong> {sc.acting_notes}</p>}
+                      </details>
+                    )}
+                    <div className="seg2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} role="group" aria-label={`Status for ${a.name}`}>
+                      {(["considering", "callback", "cast"] as const).map((s) => (
                         <button key={s} aria-pressed={x.status === s}
                           onClick={() => x.status !== s && write(sb.from("castings").update({ status: s }).match(key))}>
-                          {s === "cast" ? "Cast" : "Considering"}
+                          {s === "cast" ? "Cast" : s === "callback" ? "Callback" : "Considering"}
                         </button>
                       ))}
                     </div>
                     <CastNote casting={x} label={`Notes on ${a.name} as ${c.name}`}
                       onSave={(note) => write(sb.from("castings").update({ note }).match(key))} />
                     <button className="linkbtn" onClick={() => write(sb.from("castings").delete().match(key))}>
-                      Take off {c.name}
+                      Remove {a.name}
                     </button>
                   </div>
                 );

@@ -2,10 +2,12 @@
 
 import { useParams } from "next/navigation";
 import { Fragment, useState } from "react";
+import { MusicFiles } from "@/components/music-view";
 import { ProductionFrame, sessionTabs } from "@/components/production-frame";
+import { ScoringDesk, SingerHeader, toggleCasting } from "@/components/scoring-desk";
 import { axisPct, fit, isNoteOrEmpty, midi, roleSpec, VOICES } from "@/lib/music";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { missingMusic, type Auditioner, type Session } from "@/lib/types";
+import { MUSIC_LABEL, missingMusic, type Auditioner, type Session } from "@/lib/types";
 import { useProduction, useSessionProduction, type ProductionData } from "@/lib/use-production";
 
 export function MusicDirector() {
@@ -17,7 +19,7 @@ export function MusicDirector() {
       data={data}
       state={missing ? "missing" : state}
       live={live}
-      tabs={productionId ? sessionTabs(sessionId, productionId) : []}
+      tabs={sessionTabs(sessionId)}
     >
       {(d) => {
         const session = d.sessions.find((s) => s.id === sessionId);
@@ -29,68 +31,17 @@ export function MusicDirector() {
 }
 
 function Desk({ d, session, refresh }: { d: ProductionData; session: Session; refresh: () => void }) {
-  const mine = d.auditioners.filter((a) => a.session_id === session.id);
   const currentId = session.current_auditioner_id;
-  const [picked, setPicked] = useState<string | null>(null);
-  const [follow, setFollow] = useState(true);
-  const [dirty, setDirty] = useState(false);
-  const [leaveWarn, setLeaveWarn] = useState<string | null>(null);
-  const [lastCurrent, setLastCurrent] = useState(currentId);
-
-  // Jump to whoever starts singing, unless there are unsaved notes.
-  if (currentId !== lastCurrent) {
-    setLastCurrent(currentId);
-    if (follow && currentId && !dirty) setPicked(currentId);
-  }
-
-  const selectedId =
-    (picked && mine.some((a) => a.id === picked) ? picked : null) ??
-    (currentId && mine.some((a) => a.id === currentId) ? currentId : null) ??
-    mine[mine.length - 1]?.id ??
-    null;
-  const selected = mine.find((a) => a.id === selectedId) ?? null;
-
-  function pick(id: string) {
-    if (id === selectedId) return;
-    if (dirty && leaveWarn !== id) {
-      setLeaveWarn(id);
-      return;
-    }
-    setLeaveWarn(null);
-    setDirty(false);
-    setPicked(id);
-  }
-
   return (
-    <div className="md">
-      <div className="stack" style={{ gap: 8 }}>
-        <nav className="mdlist" aria-label="Auditioners">
-          {mine.length === 0 && <p className="hint" style={{ padding: 8 }}>Nobody has checked in yet.</p>}
-          {mine.map((a) => (
-            <button key={a.id} className="li" aria-current={a.id === selectedId} onClick={() => pick(a.id)}>
-              <span>{a.slot} · {a.name}</span>
-              <Status a={a} d={d} currentId={currentId} />
-            </button>
-          ))}
-        </nav>
-        <label className="follow">
-          <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Jump to whoever is singing
-        </label>
-        {leaveWarn && (
-          <p className="err" role="alert" style={{ padding: "0 8px" }}>
-            You have unsaved notes. Save them, or tap that name again to leave without saving.
-          </p>
-        )}
-      </div>
-      {selected ? (
-        <Detail key={selected.id} a={selected} d={d} onDirty={setDirty} refresh={refresh} />
-      ) : (
-        <div className="empty">
-          <h2>No one to score yet</h2>
-          <p className="lede">When singers check in, pick one from the list to log their range and notes.</p>
-        </div>
-      )}
-    </div>
+    <ScoringDesk
+      d={d}
+      session={session}
+      refresh={refresh}
+      emptyText="When singers check in, pick one from the list to log their range and vocal notes."
+      status={(a) => <Status a={a} d={d} currentId={currentId} />}
+    >
+      {(a, onDirty) => <Detail a={a} d={d} onDirty={onDirty} refresh={refresh} />}
+    </ScoringDesk>
   );
 }
 
@@ -98,7 +49,7 @@ function Status({ a, d, currentId }: { a: Auditioner; d: ProductionData; current
   const sc = d.scores[a.id];
   if (a.id === currentId && a.status !== "done") return <small className="cb">Singing</small>;
   if (sc?.callback_ids.length) return <small className="cb">Callback</small>;
-  if (sc?.rating) return <small>Rated {sc.rating}</small>;
+  if (sc?.rating) return <small>Vocal {sc.rating}</small>;
   if (missingMusic(a) && a.status !== "done") return <small className="warn">No music</small>;
   if (a.status === "done") return <small>Sang</small>;
   return <small>Waiting</small>;
@@ -150,29 +101,17 @@ function Detail({
 
   async function toggleConsider(characterId: string, on: boolean) {
     setPlacing(characterId);
-    const sb = supabaseBrowser();
-    const { error } = on
-      ? await sb.from("castings").delete().eq("character_id", characterId).eq("auditioner_id", a.id)
-      : await sb.from("castings").insert({ character_id: characterId, auditioner_id: a.id });
+    const ok = await toggleCasting(characterId, a.id, on);
     setPlacing(null);
-    if (error) setMsg("That casting change didn’t save. Try again.");
+    if (!ok) setMsg("That casting change didn’t save. Try again.");
     refresh();
   }
 
   const lo = midi(form.low_note), hi = midi(form.high_note);
-  const session = d.sessions.find((s) => s.id === a.session_id);
-  const wanted = d.characters.filter((c) => a.character_ids.includes(c.id)).map((c) => c.name);
 
   return (
     <div className="stack">
-      <div>
-        <p className="lede">
-          {a.slot} · {a.song}{a.show ? ` (${a.show})` : ""}{a.song_key ? ` · ${a.song_key}` : ""}
-          {d.sessions.length > 1 && session ? ` · ${session.name}` : ""}
-        </p>
-        <h2 style={{ fontSize: 34 }}>{a.name}</h2>
-        {wanted.length > 0 && <p className="hint" style={{ marginTop: 4 }}>Would like to be considered for {wanted.join(", ")}</p>}
-      </div>
+      <SingerHeader a={a} d={d} />
       <div className="mdgrid">
         <div className="stack" style={{ minWidth: 0 }}>
           <section className="panel">
@@ -200,6 +139,25 @@ function Detail({
             </div>
             {badRange && <p className="err">Write notes like G3, Bb4 or F#5.</p>}
           </section>
+
+          <details className="panel">
+            <summary style={{ cursor: "pointer", minHeight: 44, display: "flex", alignItems: "center", fontFamily: "var(--display)", fontWeight: 700, fontSize: 20 }}>
+              Their music · {MUSIC_LABEL[a.music_type]}
+            </summary>
+            <div className="stack" style={{ gap: 12, marginTop: 12 }}>
+              <p className="hint">
+                {[a.song_key && `Key ${a.song_key}`, a.first_note && `first note ${a.first_note}`, a.tempo && `${a.tempo} BPM`,
+                  (a.cut_start || a.cut_end) && `cut ${a.cut_start || "?"} to ${a.cut_end || "?"}`].filter(Boolean).join(" · ") || "No key, tempo or cut given."}
+              </p>
+              {a.note && <div className="note">Singer’s note: {a.note}</div>}
+              {a.files.length > 0 && <MusicFiles files={a.files} song={a.song} />}
+              {a.music_type === "link" && a.track_link && (
+                <a className="btn self-start" href={a.track_link} target="_blank" rel="noopener noreferrer">Open their track link</a>
+              )}
+              {a.music_type === "phone" && <p>Track is on the singer’s phone.</p>}
+              {missingMusic(a) && <div className="missing-box">No music uploaded.</div>}
+            </div>
+          </details>
 
           <section className="panel">
             <div className="spread">
@@ -251,7 +209,7 @@ function Detail({
         </div>
 
         <section className="panel">
-          <h3 style={{ fontSize: 20 }}>Your notes</h3>
+          <h3 style={{ fontSize: 20 }}>Vocal notes</h3>
           <div className="field">
             <span className="label" id="md-rlabel">Vocal rating</span>
             <div className="rating" role="group" aria-labelledby="md-rlabel">
@@ -290,7 +248,7 @@ function Detail({
           ) : (
             <p className="hint">Add characters in Setup to mark callbacks.</p>
           )}
-          <button className="btn primary big wide" onClick={save}>Save notes</button>
+          <button className="btn primary big wide" onClick={save}>Save vocal notes</button>
           <span className="saved" role="status">{msg}</span>
         </section>
       </div>

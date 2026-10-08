@@ -18,7 +18,7 @@ export function ProductionFrame({
   data: ProductionData | null;
   state: LoadState;
   live: boolean;
-  tabs?: Tab[];
+  tabs?: Tab[] | ((d: ProductionData) => Tab[]);
   kicker?: string;
   right?: ReactNode;
   children: (d: ProductionData) => ReactNode;
@@ -28,7 +28,7 @@ export function ProductionFrame({
       <TopBar
         kicker={kicker ?? data?.theatre.name ?? "Audition Room"}
         title={data?.production.title ?? "Loading…"}
-        tabs={data ? tabs : undefined}
+        tabs={data ? (typeof tabs === "function" ? tabs(data) : tabs) : undefined}
         right={right ?? <Link className="switch" href="/app">All productions</Link>}
       />
       {data && !live && (
@@ -53,18 +53,27 @@ export function ProductionFrame({
   );
 }
 
-export function productionTabs(productionId: string): Tab[] {
+/**
+ * Every team member sees every stage. Session pages use their own session;
+ * production pages (Setup, Casting) use the most recent session.
+ */
+function allTabs(d: ProductionData, sessionId: string | null): Tab[] {
+  const p = `/app/p/${d.production.id}`;
+  const sid = sessionId ?? d.sessions[d.sessions.length - 1]?.id ?? null;
+  const s = sid ? `/app/s/${sid}` : null;
   return [
-    { href: `/app/p/${productionId}`, label: "Setup" },
-    { href: `/app/p/${productionId}/cast`, label: "Casting" },
+    ...(s
+      ? [
+          { href: `${s}/overview`, label: "Overview" },
+          { href: `${s}/accompanist`, label: "Accompanist" },
+          { href: `${s}/music-director`, label: "Vocal" },
+          { href: `${s}/acting`, label: "Acting" },
+        ]
+      : []),
+    { href: `${p}/cast`, label: "Casting" },
+    { href: p, label: "Setup" },
   ];
 }
 
-export function sessionTabs(sessionId: string, productionId: string): Tab[] {
-  return [
-    { href: `/app/s/${sessionId}/accompanist`, label: "Accompanist" },
-    { href: `/app/s/${sessionId}/music-director`, label: "Music director" },
-    { href: `/app/p/${productionId}/cast`, label: "Casting" },
-    { href: `/app/p/${productionId}`, label: "Setup" },
-  ];
-}
+export const productionTabs = () => (d: ProductionData) => allTabs(d, null);
+export const sessionTabs = (sessionId: string) => (d: ProductionData) => allTabs(d, sessionId);
