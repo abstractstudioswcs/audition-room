@@ -7,7 +7,8 @@ import { isNoteOrEmpty } from "@/lib/music";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import {
   AUDIO_TYPES,
-  MAX_FILE_BYTES,
+  maxBytesFor,
+  normalizeType,
   MAX_FILES,
   SHEET_TYPES,
   type CheckinInfo,
@@ -137,10 +138,11 @@ function CheckInForm({
     const uploading = musicType === "sheet" || musicType === "track" ? files : [];
     if (uploading.length > MAX_FILES) return setError(`Upload ${MAX_FILES} files or fewer.`);
     const allowed = musicType === "track" ? AUDIO_TYPES : SHEET_TYPES;
-    const bad = uploading.find((x) => !allowed.includes(x.type));
-    if (bad) return setError(musicType === "track" ? `${bad.name} isn’t an audio file. Use MP3 or M4A.` : `${bad.name} isn’t a PDF or photo.`);
-    const big = uploading.find((x) => x.size > MAX_FILE_BYTES);
-    if (big) return setError(`${big.name} is over 20 MB.`);
+    const typeOf = (x: File) => normalizeType(x.name, x.type);
+    const bad = uploading.find((x) => !allowed.includes(typeOf(x)));
+    if (bad) return setError(musicType === "track" ? `${bad.name} isn’t an audio file. Use MP3, M4A or WAV.` : `${bad.name} isn’t a PDF or photo.`);
+    const big = uploading.find((x) => x.size > maxBytesFor(typeOf(x)));
+    if (big) return setError(`${big.name} is over ${maxBytesFor(typeOf(big)) / 1024 / 1024} MB.${typeOf(big) === "audio/wav" ? " Trim the WAV to your cut, or export it as MP3." : ""}`);
     const link = val("track_link");
     if (musicType === "link" && link && !/^https?:\/\//i.test(link)) return setError("Track links start with https://");
 
@@ -152,7 +154,7 @@ function CheckInForm({
         const res = await fetch("/api/uploads", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ code, files: uploading.map((x) => ({ name: x.name, type: x.type, size: x.size })) }),
+          body: JSON.stringify({ code, files: uploading.map((x) => ({ name: x.name, type: typeOf(x), size: x.size })) }),
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body.error || "Uploads aren’t available right now.");
@@ -160,7 +162,7 @@ function CheckInForm({
         for (let i = 0; i < slots.length; i++) {
           setBusy(`Uploading ${i + 1} of ${slots.length}…`);
           const { error: upErr } = await supabase.storage.from("music").uploadToSignedUrl(slots[i].path, slots[i].token, uploading[i], {
-            contentType: uploading[i].type,
+            contentType: slots[i].type,
           });
           if (upErr) throw new Error(`${uploading[i].name} didn’t upload. Check your connection and try again.`);
           stored.push({ path: slots[i].path, name: slots[i].name, type: slots[i].type });
@@ -246,7 +248,7 @@ function CheckInForm({
         {needsUpload && (
           <div className="field">
             <label htmlFor="ci-files">
-              {musicType === "sheet" ? "Upload your marked music (PDF or photos of each page)" : "Upload your backing track (MP3 or M4A)"}
+              {musicType === "sheet" ? "Upload your marked music (PDF or photos of each page)" : "Upload your backing track (MP3, M4A or WAV)"}
             </label>
             <input
               id="ci-files"
@@ -257,7 +259,7 @@ function CheckInForm({
               onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
             />
             <p className="hint">
-              {musicType === "sheet" ? "Mark your cut on the pages before you upload. Up to 20 MB per file." : "Start the track at your cut. Up to 20 MB."}
+              {musicType === "sheet" ? "Mark your cut on the pages before you upload. Up to 20 MB per file." : "Start the track at your cut. Up to 50 MB, which fits about 5 minutes of WAV."}
             </p>
           </div>
         )}

@@ -89,7 +89,31 @@ export function missingMusic(a: Auditioner): boolean {
 }
 
 /** Upload limits shared by the check-in form and the upload API. */
-export const MAX_FILE_BYTES = 20 * 1024 * 1024;
+export const MAX_FILE_BYTES = 20 * 1024 * 1024; // sheet music
+export const MAX_AUDIO_BYTES = 50 * 1024 * 1024; // WAV runs about 10 MB a minute
 export const MAX_FILES = 8;
 export const SHEET_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/heic"];
 export const AUDIO_TYPES = ["audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/aac", "audio/wav", "audio/x-wav"];
+
+export const maxBytesFor = (type: string) => (type.startsWith("audio/") ? MAX_AUDIO_BYTES : MAX_FILE_BYTES);
+
+const BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
+  heic: "image/heic", mp3: "audio/mpeg", m4a: "audio/mp4", aac: "audio/aac", wav: "audio/wav",
+};
+const ALIASES: Record<string, string> = {
+  "audio/wave": "audio/wav", "audio/vnd.wave": "audio/wav", "audio/x-pn-wav": "audio/wav",
+  "audio/mp3": "audio/mpeg", "audio/x-mp3": "audio/mpeg", "audio/x-mpeg": "audio/mpeg",
+};
+
+/**
+ * One standard type per file. Browsers label WAV and MP3 several ways, and
+ * some send no type at all, so fall back to the file extension.
+ */
+export function normalizeType(name: string, type: string): string {
+  const t = (type || "").toLowerCase().split(";")[0].trim();
+  if (t && ALIASES[t]) return ALIASES[t];
+  if (t && t !== "application/octet-stream") return t;
+  const ext = name.toLowerCase().split(".").pop() ?? "";
+  return BY_EXTENSION[ext] ?? t;
+}

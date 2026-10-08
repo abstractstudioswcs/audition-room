@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { AUDIO_TYPES, MAX_FILE_BYTES, MAX_FILES, SHEET_TYPES } from "@/lib/types";
+import { AUDIO_TYPES, MAX_FILES, SHEET_TYPES, maxBytesFor, normalizeType } from "@/lib/types";
 
 // Gives a performer one-time upload links for their music, after checking the
 // session code is real and open. Files land at music/<session_id>/<random>/<name>,
@@ -36,11 +36,12 @@ export async function POST(request: Request) {
     if (typeof f?.name !== "string" || typeof f?.type !== "string" || typeof f?.size !== "number") {
       return NextResponse.json({ error: "File details are incomplete." }, { status: 400 });
     }
+    f.type = normalizeType(f.name, f.type);
     if (!ALLOWED.has(f.type)) {
-      return NextResponse.json({ error: `${f.name} can't be uploaded. Use a PDF, photo, MP3 or M4A.` }, { status: 400 });
+      return NextResponse.json({ error: `${f.name} can't be uploaded. Use a PDF, photo, MP3, M4A or WAV.` }, { status: 400 });
     }
-    if (f.size <= 0 || f.size > MAX_FILE_BYTES) {
-      return NextResponse.json({ error: `${f.name} is over 20 MB.` }, { status: 400 });
+    if (f.size <= 0 || f.size > maxBytesFor(f.type)) {
+      return NextResponse.json({ error: `${f.name} is over ${maxBytesFor(f.type) / 1024 / 1024} MB.` }, { status: 400 });
     }
   }
 
