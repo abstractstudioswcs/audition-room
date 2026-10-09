@@ -57,6 +57,11 @@ select pg_temp.fails($$select check_in((select v from ids where k = 'code'), '{"
 select pg_temp.ok(check_in((select v from ids where k = 'code'), jsonb_build_object('name', 'Priya   Nair', 'song', 'Astonishing', 'music_type', 'phone',
   'headshot_path', (select v from ids where k = 'session') || '/h1/me.jpg')) = 3, 'check-in with headshot gets the next number');
 select pg_temp.fails($$select check_in((select v from ids where k = 'code'), '{"name":"PRIYA NAIR","song":"Y","music_type":"phone"}')$$, 'name match ignores case and spacing');
+select pg_temp.ok(check_in((select v from ids where k = 'code'), '{"name":"Sam Ellis","song":"Santa Fe","music_type":"phone","tempo":"fast","first_note":"not sure",
+  "conflicts":[{"date":"2026-11-03","start":"18:00","end":"21:00","note":"Work"},{"date":"2026-11-07"},{"date":"tomorrow"},{"date":"2026-02-30"},{"date":"2026-11-10","start":"25:00","note":"x"}],
+  "conflict_notes":"Out of town Thanksgiving week"}') = 4, 'messy tempo, note and conflicts never block a check-in');
+select pg_temp.ok(check_in((select v from ids where k = 'code'), '{"name":"Lena Ortiz","song":"Defying Gravity","music_type":"phone","no_conflicts":true}') = 5, 'performer can say they have no conflicts');
+select pg_temp.ok((checkin_info((select v from ids where k = 'code')) ? 'rehearsal_info'), 'performer sees the rehearsal schedule field');
 select pg_temp.fails($$select check_in('not-a-code', '{"name":"X","song":"Y","music_type":"phone"}')$$, 'bad code cannot check in');
 select pg_temp.ok((select count(*) from auditioners) = 0, 'performer cannot read the auditioner list');
 select pg_temp.ok((select count(*) from characters) = 0, 'performer cannot read character details');
@@ -64,7 +69,14 @@ select pg_temp.fails($$insert into auditioners (session_id, slot, name, song, mu
 
 -- Owner sees the check-ins; unknown characters were dropped.
 reset role; set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select pg_temp.ok((select count(*) from auditioners) = 3, 'owner sees every check-in');
+select pg_temp.ok((select count(*) from auditioners) = 5, 'owner sees every check-in');
+select pg_temp.ok((select tempo is null and first_note = 'not sure' from auditioners where slot = 4), 'unusable tempo is dropped, free-text note is kept');
+select pg_temp.ok((select jsonb_array_length(conflicts) from auditioners where slot = 4) = 3, 'only real dates are kept as conflicts');
+select pg_temp.ok((select conflicts -> 2 ->> 'start' from auditioners where slot = 4) = '', 'an impossible time becomes all day');
+select pg_temp.ok((select no_conflicts from auditioners where slot = 5), 'no-conflicts answer is saved');
+update productions set rehearsal_info = 'Mon to Thu, 6 to 9 pm';
+select pg_temp.ok((select rehearsal_info from productions) <> '', 'team can post the rehearsal schedule');
+delete from auditioners where slot in (4, 5);
 select pg_temp.ok((select name from auditioners where slot = 3) = 'Priya Nair', 'extra spaces in names are tidied');
 select pg_temp.ok((select headshot_path <> '' from auditioners where slot = 3), 'headshot is saved');
 select pg_temp.ok((select cardinality(character_ids) from auditioners where slot = 1) = 1, 'unknown character ids are dropped');

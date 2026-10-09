@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ConflictList } from "@/components/conflict-list";
 import { Headshot } from "@/components/headshot";
+import { conflictSummary } from "@/lib/conflicts";
 import { ProductionFrame, productionTabs } from "@/components/production-frame";
 import { fitNotes, fitRank, roleSpec } from "@/lib/music";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -100,13 +102,20 @@ function Board({ d, refresh }: { d: ProductionData; refresh: () => void }) {
                         </div>
                         <p className="hint">{vocal || "No vocal notes yet"}</p>
                         <p className="hint">{[acting || "No acting notes yet", sessionName(a)].filter(Boolean).join(" · ")}</p>
+                        <p className="hint">Conflicts: {conflictSummary(a).toLowerCase()}</p>
                       </div>
                     </div>
-                    {(sc?.notes || sc?.acting_notes) && (
+                    {(sc?.notes || sc?.acting_notes || a.conflicts?.length || a.conflict_notes) && (
                       <details>
-                        <summary className="hint" style={{ cursor: "pointer", minHeight: 32 }}>Vocal and acting notes</summary>
+                        <summary className="hint" style={{ cursor: "pointer", minHeight: 32 }}>Notes and conflicts</summary>
                         {sc?.notes && <p style={{ whiteSpace: "pre-wrap", marginTop: 6 }}><strong>Vocal:</strong> {sc.notes}</p>}
                         {sc?.acting_notes && <p style={{ whiteSpace: "pre-wrap", marginTop: 6 }}><strong>Acting:</strong> {sc.acting_notes}</p>}
+                        {(a.conflicts?.length || a.conflict_notes) ? (
+                          <div style={{ marginTop: 6 }}>
+                            <strong>Conflicts:</strong>
+                            <ConflictList a={a} compact />
+                          </div>
+                        ) : null}
                       </details>
                     )}
                     <div className="seg2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} role="group" aria-label={`Status for ${a.name}`}>

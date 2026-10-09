@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { isNoteOrEmpty } from "@/lib/music";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import {
   AUDIO_TYPES,
@@ -123,6 +122,8 @@ function CheckInForm({
   const [files, setFiles] = useState<File[]>([]);
   const [headshot, setHeadshot] = useState<File | null>(null);
   const [chars, setChars] = useState<string[]>([]);
+  const [conflicts, setConflicts] = useState<ConflictRow[]>([]);
+  const [noConflicts, setNoConflicts] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -133,9 +134,10 @@ function CheckInForm({
     const val = (k: string) => String(f.get(k) ?? "").trim();
     const name = val("name"), song = val("song"), tempo = val("tempo"), firstNote = val("first_note");
 
+    // Only name and song are required. Musical details are optional and never block a check-in.
     if (!name || !song) return setError("Add your name and song title to check in.");
-    if (tempo && !(Number(tempo) >= 30 && Number(tempo) <= 300)) return setError("Tempo should be beats per minute, like 112.");
-    if (!isNoteOrEmpty(firstNote)) return setError("Write the first note like Bb3 or F#4: letter, sharp or flat, octave number.");
+    const halfDone = conflicts.find((c) => !c.date && (c.start || c.end || c.note));
+    if (halfDone) return setError("Pick a date for each conflict, or remove the ones you don’t need.");
     const uploading = musicType === "sheet" || musicType === "track" ? files : [];
     if (uploading.length > MAX_FILES) return setError(`Upload ${MAX_FILES} files or fewer.`);
     const allowed = musicType === "track" ? AUDIO_TYPES : SHEET_TYPES;
@@ -194,6 +196,11 @@ function CheckInForm({
           note: val("note"),
           character_ids: chars,
           headshot_path: headshotPath,
+          conflicts: conflicts
+            .filter((c) => c.date)
+            .map((c) => ({ date: c.date, start: c.allDay ? "" : c.start, end: c.allDay ? "" : c.end, note: c.note.trim() })),
+          conflict_notes: val("conflict_notes"),
+          no_conflicts: noConflicts && conflicts.every((c) => !c.date),
         },
       });
       if (ciErr) {
@@ -306,20 +313,28 @@ function CheckInForm({
           </div>
         )}
 
-        <div className="row3">
-          <div className="field">
-            <label htmlFor="ci-key">Key</label>
-            <input id="ci-key" name="song_key" placeholder="E♭ major" maxLength={40} />
+        <details className="optional-box">
+          <summary>
+            <span>
+              <strong>Musical details</strong> <span className="hint">(optional)</span>
+            </span>
+            <span className="hint">Key, first note, tempo. Skip this if you’re not sure. The pianist will work it out with you.</span>
+          </summary>
+          <div className="row3" style={{ marginTop: 12 }}>
+            <div className="field">
+              <label htmlFor="ci-key">Key</label>
+              <input id="ci-key" name="song_key" placeholder="E♭ major" maxLength={40} />
+            </div>
+            <div className="field">
+              <label htmlFor="ci-note">First note you sing</label>
+              <input id="ci-note" name="first_note" className="mono" placeholder="Bb3" maxLength={12} />
+            </div>
+            <div className="field">
+              <label htmlFor="ci-tempo">Tempo (beats per minute)</label>
+              <input id="ci-tempo" name="tempo" className="mono" inputMode="numeric" placeholder="112" maxLength={3} />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="ci-note">First sung note</label>
-            <input id="ci-note" name="first_note" className="mono" placeholder="Bb3" maxLength={8} autoCapitalize="characters" />
-          </div>
-          <div className="field">
-            <label htmlFor="ci-tempo">Tempo (BPM)</label>
-            <input id="ci-tempo" name="tempo" className="mono" inputMode="numeric" placeholder="112" maxLength={3} />
-          </div>
-        </div>
+        </details>
         <div className="field">
           <label htmlFor="ci-msg">Note for the pianist (optional)</label>
           <textarea id="ci-msg" name="note" rows={2} maxLength={500} />
@@ -343,11 +358,100 @@ function CheckInForm({
           </fieldset>
         )}
 
+        <Conflicts
+          info={info}
+          rows={conflicts}
+          setRows={setConflicts}
+          none={noConflicts}
+          setNone={setNoConflicts}
+        />
+
         <p className="err" role="alert">{error}</p>
         <button className="btn primary big wide" type="submit" disabled={!!busy}>
           {busy ?? "Check in"}
         </button>
       </form>
     </section>
+  );
+}
+
+type ConflictRow = { id: number; date: string; allDay: boolean; start: string; end: string; note: string };
+let nextRowId = 1;
+const blankConflict = (): ConflictRow => ({ id: nextRowId++, date: "", allDay: true, start: "", end: "", note: "" });
+
+function Conflicts({
+  info,
+  rows,
+  setRows,
+  none,
+  setNone,
+}: {
+  info: CheckinInfo;
+  rows: ConflictRow[];
+  setRows: (r: ConflictRow[]) => void;
+  none: boolean;
+  setNone: (v: boolean) => void;
+}) {
+  const edit = (id: number, patch: Partial<ConflictRow>) => setRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  return (
+    <fieldset className="optional-box">
+      <legend style={{ float: "left", width: "100%", marginBottom: 4 }}>
+        <strong style={{ color: "var(--ink)", fontSize: 16 }}>Rehearsal conflicts</strong>
+      </legend>
+      {info.rehearsal_info ? (
+        <div className="note" style={{ whiteSpace: "pre-wrap" }}>
+          <strong>Rehearsal schedule:</strong> {info.rehearsal_info}
+        </div>
+      ) : null}
+      <p className="hint">
+        List any dates you already know you can’t make: work, school events, trips. The director uses this when building the schedule.
+      </p>
+      {rows.map((r, i) => (
+        <div key={r.id} className="conflict-row">
+          <div className="field">
+            <label htmlFor={`cf-d-${r.id}`}>Date {i + 1}</label>
+            <input id={`cf-d-${r.id}`} type="date" value={r.date} onChange={(e) => edit(r.id, { date: e.target.value })} />
+          </div>
+          <label className="follow" style={{ padding: 0, alignSelf: "end" }}>
+            <input type="checkbox" checked={r.allDay} onChange={(e) => edit(r.id, { allDay: e.target.checked })} /> All day
+          </label>
+          {!r.allDay && (
+            <>
+              <div className="field">
+                <label htmlFor={`cf-s-${r.id}`}>From</label>
+                <input id={`cf-s-${r.id}`} type="time" value={r.start} onChange={(e) => edit(r.id, { start: e.target.value })} />
+              </div>
+              <div className="field">
+                <label htmlFor={`cf-e-${r.id}`}>Until</label>
+                <input id={`cf-e-${r.id}`} type="time" value={r.end} onChange={(e) => edit(r.id, { end: e.target.value })} />
+              </div>
+            </>
+          )}
+          <div className="field cf-note">
+            <label htmlFor={`cf-n-${r.id}`}>Reason (optional)</label>
+            <input id={`cf-n-${r.id}`} value={r.note} maxLength={200} placeholder="Work, school concert, family trip"
+              onChange={(e) => edit(r.id, { note: e.target.value })} />
+          </div>
+          <button type="button" className="linkbtn" onClick={() => setRows(rows.filter((x) => x.id !== r.id))}>
+            Remove this date
+          </button>
+        </div>
+      ))}
+      <div className="inline">
+        <button type="button" className="btn" onClick={() => { setRows([...rows, blankConflict()]); setNone(false); }}>
+          {rows.length ? "Add another date" : "Add a conflict"}
+        </button>
+        {rows.length === 0 && (
+          <label className="follow" style={{ padding: 0 }}>
+            <input type="checkbox" checked={none} onChange={(e) => setNone(e.target.checked)} /> I don’t have any conflicts
+          </label>
+        )}
+      </div>
+      <div className="field">
+        <label htmlFor="ci-conflict-notes">Anything else about your schedule (optional)</label>
+        <textarea id="ci-conflict-notes" name="conflict_notes" rows={2} maxLength={1000}
+          placeholder="Every other weekend with family, out of town Thanksgiving week" />
+      </div>
+    </fieldset>
   );
 }

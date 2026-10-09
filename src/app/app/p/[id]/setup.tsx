@@ -20,6 +20,7 @@ export function Setup() {
           <TitlePanel d={d} onSaved={refresh} />
           <SessionsPanel d={d} onSaved={refresh} />
           <CharactersPanel d={d} onSaved={refresh} />
+          <RehearsalPanel d={d} onSaved={refresh} />
         </div>
       )}
     </ProductionFrame>
@@ -55,6 +56,49 @@ function TitlePanel({ d, onSaved }: { d: ProductionData; onSaved: () => void }) 
         <button className="btn" type="submit" disabled={!dirty} style={{ alignSelf: "flex-end" }}>Rename</button>
         <span className="saved" role="status">{msg}</span>
       </form>
+    </section>
+  );
+}
+
+/* ---------- rehearsal schedule ---------- */
+
+function RehearsalPanel({ d, onSaved }: { d: ProductionData; onSaved: () => void }) {
+  const [text, setText] = useState(d.production.rehearsal_info ?? "");
+  const [msg, setMsg] = useState("");
+  const dirty = text.trim() !== (d.production.rehearsal_info ?? "");
+  return (
+    <section className="panel">
+      <h2 style={{ fontSize: 22 }}>Rehearsal schedule</h2>
+      <p className="hint">
+        Performers see this at check-in, right above where they list their conflicts. Include the usual days and times and any
+        required dates like tech week and performances.
+      </p>
+      <div className="field">
+        <label htmlFor="rinfo">Schedule for performers</label>
+        <textarea
+          id="rinfo"
+          rows={5}
+          maxLength={2000}
+          value={text}
+          placeholder={"Rehearsals Mon to Thu, 6 to 9 pm, starting Nov 2\nTech week Dec 7 to 11, all required\nPerformances Dec 12 to 14"}
+          onChange={(e) => { setText(e.target.value); setMsg(""); }}
+        />
+      </div>
+      <div className="inline">
+        <button
+          className="btn primary"
+          disabled={!dirty}
+          onClick={async () => {
+            setMsg("Saving…");
+            const { error } = await supabaseBrowser().from("productions").update({ rehearsal_info: text.trim() }).eq("id", d.production.id);
+            setMsg(error ? "Not saved. Try again." : "Saved");
+            onSaved();
+          }}
+        >
+          Save schedule
+        </button>
+        <span className="saved" role="status">{dirty && !msg ? "Unsaved changes" : msg}</span>
+      </div>
     </section>
   );
 }

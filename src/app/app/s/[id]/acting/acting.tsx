@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { ConflictList } from "@/components/conflict-list";
 import { ProductionFrame, sessionTabs } from "@/components/production-frame";
 import { ScoringDesk, SingerHeader, toggleCasting } from "@/components/scoring-desk";
 import { fitNotes } from "@/lib/music";
@@ -85,6 +86,10 @@ function Detail({ a, d, onDirty, refresh }: { a: Auditioner; d: ProductionData; 
             <h3 style={{ fontSize: 20 }}>From the music director</h3>
             <p>{vocal || "No vocal notes yet."}</p>
             {saved?.notes && <p className="hint" style={{ whiteSpace: "pre-wrap" }}>{saved.notes}</p>}
+          </section>
+          <section className="panel">
+            <h3 style={{ fontSize: 20 }}>Rehearsal conflicts</h3>
+            <ConflictList a={a} />
           </section>
           <section className="panel">
             <div className="spread">

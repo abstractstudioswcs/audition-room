@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Headshot } from "@/components/headshot";
 import { ProductionFrame, sessionTabs } from "@/components/production-frame";
+import { conflictSummary } from "@/lib/conflicts";
 import { MUSIC_LABEL, missingMusic, type Auditioner, type Session } from "@/lib/types";
 import { useProduction, useSessionProduction, type ProductionData } from "@/lib/use-production";
 
@@ -45,6 +46,7 @@ function Board({ d, session }: { d: ProductionData; session: Session }) {
     ["Vocal notes", list.filter((a) => sc(a)?.rating || sc(a)?.low_note).length],
     ["Acting notes", list.filter((a) => sc(a)?.acting_rating || sc(a)?.acting_notes).length],
     ["On the casting board", list.filter((a) => placedOn(a).length > 0).length],
+    ["Listed conflicts", list.filter((a) => a.conflicts?.length || a.conflict_notes).length],
   ] as const;
 
   return (
@@ -83,10 +85,10 @@ function Board({ d, session }: { d: ProductionData; session: Session }) {
         </div>
       ) : (
         <div className="panel" style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
             <thead>
               <tr style={{ textAlign: "left" }}>
-                {["Singer", "Music", "In the room", "Vocal", "Acting", "Casting"].map((h) => (
+                {["Singer", "Music", "In the room", "Vocal", "Acting", "Casting", "Conflicts"].map((h) => (
                   <th key={h} scope="col" className="label" style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)", fontWeight: 500 }}>{h}</th>
                 ))}
               </tr>
@@ -148,6 +150,11 @@ function Board({ d, session }: { d: ProductionData; session: Session }) {
                           {s?.callback_ids.length ? <><br /><span className="hint">Callback</span></> : null}
                         </span>
                       ) : notYet}
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <Link href={`/app/p/${d.production.id}/conflicts`} style={{ color: "inherit" }}>
+                        {conflictSummary(a)}
+                      </Link>
                     </td>
                   </tr>
                 );

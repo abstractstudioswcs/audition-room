@@ -1,6 +1,6 @@
 export type Theatre = { id: string; name: string; team_code: string; created_by: string };
 export type Member = { theatre_id: string; user_id: string; role: "owner" | "staff" };
-export type Production = { id: string; theatre_id: string; title: string; created_at: string };
+export type Production = { id: string; theatre_id: string; title: string; rehearsal_info: string; created_at: string };
 
 export type Character = {
   id: string;
@@ -45,8 +45,14 @@ export type Auditioner = {
   character_ids: string[];
   status: "waiting" | "singing" | "done";
   headshot_path: string;
+  conflicts: Conflict[];
+  conflict_notes: string;
+  no_conflicts: boolean;
   created_at: string;
 };
+
+/** A hard rehearsal conflict. start and end are "HH:MM", or blank for all day. */
+export type Conflict = { date: string; start: string; end: string; note: string };
 
 export type Score = {
   auditioner_id: string;
@@ -75,6 +81,7 @@ export type CheckinInfo = {
   open: boolean;
   production: string;
   theatre: string;
+  rehearsal_info: string;
   characters: { id: string; name: string }[];
 };
 

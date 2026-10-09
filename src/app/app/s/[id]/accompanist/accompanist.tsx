@@ -212,7 +212,22 @@ function Singer({
       </div>
       {a.note && <div className="note">Singer’s note: {a.note}</div>}
       <section className="music" aria-label="Music">
-        {a.files.length > 0 && <MusicFiles files={a.files} song={a.song} />}
+        {a.files.length > 0 && (
+          <MusicFiles
+            files={a.files}
+            song={`${a.slot} · ${a.name} · ${a.song}`}
+            standExtras={
+              <>
+                {note !== null && (
+                  <button type="button" className="stand-btn" onClick={() => playNote(note)}>First note {a.first_note}</button>
+                )}
+                {a.tempo && (
+                  <button type="button" className="stand-btn" onClick={() => countIn(a.tempo!)}>Count in {a.tempo}</button>
+                )}
+              </>
+            }
+          />
+        )}
         {a.music_type === "link" && a.track_link && (
           <>
             <a className="btn primary self-start" href={a.track_link} target="_blank" rel="noopener noreferrer">Open their track</a>

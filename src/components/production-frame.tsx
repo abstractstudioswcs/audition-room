@@ -71,6 +71,7 @@ function allTabs(d: ProductionData, sessionId: string | null): Tab[] {
         ]
       : []),
     { href: `${p}/cast`, label: "Casting" },
+    { href: `${p}/conflicts`, label: "Conflicts" },
     { href: p, label: "Setup" },
   ];
 }
