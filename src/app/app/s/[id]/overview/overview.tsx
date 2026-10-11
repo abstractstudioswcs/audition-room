@@ -152,7 +152,7 @@ function Board({ d, session }: { d: ProductionData; session: Session }) {
                       ) : notYet}
                     </td>
                     <td style={{ padding: "10px 14px" }}>
-                      <Link href={`/app/p/${d.production.id}/conflicts`} style={{ color: "inherit" }}>
+                      <Link href={`/app/p/${d.production.id}/schedule`} style={{ color: "inherit" }}>
                         {conflictSummary(a)}
                       </Link>
                     </td>

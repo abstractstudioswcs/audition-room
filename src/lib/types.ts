@@ -51,6 +51,20 @@ export type Auditioner = {
   created_at: string;
 };
 
+export type EventKind = "rehearsal" | "tech" | "performance" | "other";
+
+/** A date on the rehearsal calendar. Times are "HH:MM" or blank. */
+export type RehearsalEvent = {
+  id: string;
+  production_id?: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  kind: EventKind;
+  title: string;
+  notes: string;
+};
+
 /** A hard rehearsal conflict. start and end are "HH:MM", or blank for all day. */
 export type Conflict = { date: string; start: string; end: string; note: string };
 
@@ -83,6 +97,7 @@ export type CheckinInfo = {
   theatre: string;
   rehearsal_info: string;
   characters: { id: string; name: string }[];
+  events?: RehearsalEvent[];
 };
 
 export const MUSIC_LABEL: Record<MusicType, string> = {

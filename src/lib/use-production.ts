@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import type { Auditioner, Casting, Character, Production, Score, Session, Theatre } from "@/lib/types";
+import type { Auditioner, Casting, Character, Production, RehearsalEvent, Score, Session, Theatre } from "@/lib/types";
 
 export type ProductionData = {
   theatre: Theatre;
@@ -12,6 +12,7 @@ export type ProductionData = {
   auditioners: Auditioner[];
   scores: Record<string, Score>;
   castings: Casting[];
+  events: RehearsalEvent[];
 };
 
 export type LoadState = "loading" | "ready" | "missing" | "error";
@@ -33,10 +34,11 @@ export function useProduction(productionId: string | null) {
     const { data: production, error: pErr } = await sb.from("productions").select("*").eq("id", productionId).maybeSingle();
     if (pErr) return setState("error");
     if (!production) return setState("missing");
-    const [theatre, characters, sessions] = await Promise.all([
+    const [theatre, characters, sessions, events] = await Promise.all([
       sb.from("theatres").select("*").eq("id", production.theatre_id).single(),
       sb.from("characters").select("*").eq("production_id", productionId).order("sort").order("created_at"),
       sb.from("sessions").select("*").eq("production_id", productionId).order("created_at"),
+      sb.from("rehearsal_events").select("*").eq("production_id", productionId).order("date").order("start_time"),
     ]);
     if (theatre.error || characters.error || sessions.error) return setState("error");
     const sessionIds = sessions.data.map((s) => s.id);
@@ -61,6 +63,8 @@ export function useProduction(productionId: string | null) {
       auditioners: auditioners.data,
       scores: scoreMap,
       castings: castings.data,
+      // Missing until the calendar update is run in Supabase; the rest still works.
+      events: events.error ? [] : (events.data as RehearsalEvent[]),
     });
     setState("ready");
   }, [productionId]);
@@ -76,7 +80,7 @@ export function useProduction(productionId: string | null) {
     refresh();
     const sb = supabaseBrowser();
     const channel = sb.channel(`production-${productionId}`);
-    for (const table of ["characters", "sessions"]) {
+    for (const table of ["characters", "sessions", "rehearsal_events"]) {
       channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `production_id=eq.${productionId}` }, soon);
     }
     for (const table of ["auditioners", "scores", "castings"]) {

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageLoading } from "@/components/page-loading";
-import { ConflictsBoard } from "./conflicts-board";
+import { ScheduleBoard } from "./schedule-board";
 
-export const metadata: Metadata = { title: "Conflicts · Audition Room" };
+export const metadata: Metadata = { title: "Schedule · Audition Room" };
 
-export default function ConflictsPage() {
+export default function SchedulePage() {
   return (
     <Suspense fallback={<PageLoading />}>
-      <ConflictsBoard />
+      <ScheduleBoard />
     </Suspense>
   );
 }

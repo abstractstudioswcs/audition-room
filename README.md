@@ -4,7 +4,7 @@ Run musical auditions from three devices: performers check in on their phones, t
 
 ## How it works
 
-- **Performers** need no account. They open the session's check-in link (or scan its QR code), add an optional headshot, upload sheet music or a backing track, list rehearsal conflicts, and get an audition number. Key, first note and tempo are optional. Each name checks in once per session.
+- **Performers** need no account. They open the session's check-in link (or scan its QR code), add an optional headshot, upload sheet music or a backing track, tap the days they can’t make on the rehearsal calendar, and get an audition number. Key, first note and tempo are optional. Each name checks in once per session.
 - **The audition team** signs in. The theatre owner shares a team code so the accompanist and director can join.
 - **Every team member can open every stage**: Overview, Accompanist, Vocal, Acting, Casting and Setup. The flow runs check-in → vocal → acting → casting.
 - Everything stays in sync live across devices.
@@ -19,7 +19,7 @@ Run musical auditions from three devices: performers check in on their phones, t
 | `/app` | Team | Theatres, team codes, productions |
 | `/app/p/<id>` | Team | Setup: characters with ranges, audition sessions, check-in links and QR codes |
 | `/app/p/<id>/cast` | Director | Casting board: Considering, Callback, Cast |
-| `/app/p/<id>/conflicts` | Director, stage manager | Rehearsal conflicts by date or person, filter to cast, download as CSV |
+| `/app/p/<id>/schedule` | Director, stage manager | Rehearsal calendar (single days or a repeating schedule), who’s out each day, conflicts by date or person, CSV |
 | `/app/s/<id>` | Team | Pick this device’s view |
 | `/app/s/<id>/overview` | Stage manager | Every singer’s progress: check-in, room, vocal, acting, casting |
 | `/app/s/<id>/accompanist` | Pianist | Live queue, preview anyone’s music, full-screen music stand with page-turn pedal support, downloads |

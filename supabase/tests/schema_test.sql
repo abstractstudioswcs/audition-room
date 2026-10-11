@@ -76,10 +76,22 @@ select pg_temp.ok((select conflicts -> 2 ->> 'start' from auditioners where slot
 select pg_temp.ok((select no_conflicts from auditioners where slot = 5), 'no-conflicts answer is saved');
 update productions set rehearsal_info = 'Mon to Thu, 6 to 9 pm';
 select pg_temp.ok((select rehearsal_info from productions) <> '', 'team can post the rehearsal schedule');
+insert into rehearsal_events (production_id, date, start_time, end_time, kind, title)
+  select id, '2026-11-02', '18:00', '21:00', 'rehearsal', 'Read-through' from productions;
+insert into rehearsal_events (production_id, date, kind) select id, '2026-12-12', 'performance' from productions;
+select pg_temp.fails($$insert into rehearsal_events (production_id, date, start_time) select id, '2026-11-03', '6pm' from productions$$, 'badly written times are refused');
+select pg_temp.fails($$insert into rehearsal_events (production_id, date, kind) select id, '2026-11-03', 'party' from productions$$, 'unknown event kinds are refused');
 delete from auditioners where slot in (4, 5);
 select pg_temp.ok((select name from auditioners where slot = 3) = 'Priya Nair', 'extra spaces in names are tidied');
 select pg_temp.ok((select headshot_path <> '' from auditioners where slot = 3), 'headshot is saved');
 select pg_temp.ok((select cardinality(character_ids) from auditioners where slot = 1) = 1, 'unknown character ids are dropped');
+
+reset role; set role anon; set request.jwt.claim.sub = '';
+select pg_temp.ok(jsonb_array_length(checkin_info((select v from ids where k = 'code')) -> 'events') = 2, 'performer sees the rehearsal calendar');
+select pg_temp.ok((checkin_info((select v from ids where k = 'code')) -> 'events' -> 0 ->> 'title') = 'Read-through', 'calendar comes in date order');
+select pg_temp.ok((select count(*) from rehearsal_events) = 0, 'performer cannot read the events table directly');
+select pg_temp.fails($$insert into rehearsal_events (production_id, date) values (gen_random_uuid(), '2026-11-01')$$, 'performer cannot add events');
+reset role; set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 
 -- Closing check-in blocks performers.
 update sessions set checkin_open = false;
@@ -113,6 +125,7 @@ insert into productions (theatre_id, title) select v::uuid, 'Other Show' from id
 insert into characters (production_id, name) select id, 'Lead' from productions where title = 'Other Show';
 select pg_temp.ok((select count(*) from auditioners) = 0, 'other theatre sees no check-ins');
 select pg_temp.ok((select count(*) from productions) = 1, 'other theatre sees only its own production');
+select pg_temp.ok((select count(*) from rehearsal_events) = 0, 'other theatre sees none of this calendar');
 select pg_temp.fails($$insert into castings (character_id, auditioner_id)
   select c.id, (select id from auditioners limit 1) from characters c$$, 'cannot cast another theatre''s auditioner');
 select pg_temp.fails($$insert into productions (theatre_id, title) select v::uuid, 'Sneaky' from ids where k = 'theatre'$$, 'cannot add productions to another theatre');

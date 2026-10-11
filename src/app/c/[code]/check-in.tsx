@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { Calendar } from "@/components/calendar";
+import { eventName, eventTime, initialMonth } from "@/lib/calendar";
+import { formatDay } from "@/lib/conflicts";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import {
   AUDIO_TYPES,
@@ -393,6 +396,22 @@ function Conflicts({
   setNone: (v: boolean) => void;
 }) {
   const edit = (id: number, patch: Partial<ConflictRow>) => setRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  const events = info.events ?? [];
+  const [month, setMonth] = useState(() => initialMonth(events));
+  const marked = new Set(rows.map((r) => r.date).filter(Boolean));
+  const scheduled = (date: string) =>
+    events.filter((e) => e.date === date).map((e) => `${eventName(e)}, ${eventTime(e)}`).join(" · ");
+
+  // Tapping a day marks it as a conflict, tapping again clears it.
+  function toggleDay(date: string) {
+    if (marked.has(date)) {
+      setRows(rows.filter((r) => r.date !== date));
+    } else {
+      setRows([...rows, { ...blankConflict(), date }].sort((x, y) => (x.date || "~").localeCompare(y.date || "~")));
+      setNone(false);
+    }
+  }
+
   return (
     <fieldset className="optional-box">
       <legend style={{ float: "left", width: "100%", marginBottom: 4 }}>
@@ -403,15 +422,34 @@ function Conflicts({
           <strong>Rehearsal schedule:</strong> {info.rehearsal_info}
         </div>
       ) : null}
-      <p className="hint">
-        List any dates you already know you can’t make: work, school events, trips. The director uses this when building the schedule.
-      </p>
+      {events.length > 0 ? (
+        <>
+          <p className="hint">
+            Here’s the rehearsal calendar. <strong>Tap any day you can’t make.</strong> Tap it again to undo. Then add times or a reason
+            below if it’s only part of the day.
+          </p>
+          <Calendar events={events} month={month} onMonth={setMonth} onDay={toggleDay} marked={marked} />
+        </>
+      ) : (
+        <p className="hint">
+          List any dates you already know you can’t make: work, school events, trips. The director uses this when building the schedule.
+        </p>
+      )}
+      {rows.length > 0 && events.length > 0 && <strong style={{ marginTop: 4 }}>Days you can’t make ({rows.length})</strong>}
       {rows.map((r, i) => (
         <div key={r.id} className="conflict-row">
-          <div className="field">
-            <label htmlFor={`cf-d-${r.id}`}>Date {i + 1}</label>
-            <input id={`cf-d-${r.id}`} type="date" value={r.date} onChange={(e) => edit(r.id, { date: e.target.value })} />
-          </div>
+          {events.length > 0 && r.date ? (
+            <div className="field" style={{ gridColumn: "1 / span 1" }}>
+              <span className="label">Day {i + 1}</span>
+              <strong>{formatDay(r.date)}</strong>
+              {scheduled(r.date) && <span className="hint">{scheduled(r.date)}</span>}
+            </div>
+          ) : (
+            <div className="field">
+              <label htmlFor={`cf-d-${r.id}`}>Date {i + 1}</label>
+              <input id={`cf-d-${r.id}`} type="date" value={r.date} onChange={(e) => edit(r.id, { date: e.target.value })} />
+            </div>
+          )}
           <label className="follow" style={{ padding: 0, alignSelf: "end" }}>
             <input type="checkbox" checked={r.allDay} onChange={(e) => edit(r.id, { allDay: e.target.checked })} /> All day
           </label>
@@ -433,13 +471,13 @@ function Conflicts({
               onChange={(e) => edit(r.id, { note: e.target.value })} />
           </div>
           <button type="button" className="linkbtn" onClick={() => setRows(rows.filter((x) => x.id !== r.id))}>
-            Remove this date
+            {r.date ? `Remove ${formatDay(r.date)}` : "Remove this date"}
           </button>
         </div>
       ))}
       <div className="inline">
         <button type="button" className="btn" onClick={() => { setRows([...rows, blankConflict()]); setNone(false); }}>
-          {rows.length ? "Add another date" : "Add a conflict"}
+          {events.length ? "Add a date not on the calendar" : rows.length ? "Add another date" : "Add a conflict"}
         </button>
         {rows.length === 0 && (
           <label className="follow" style={{ padding: 0 }}>

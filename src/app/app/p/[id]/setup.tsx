@@ -62,43 +62,18 @@ function TitlePanel({ d, onSaved }: { d: ProductionData; onSaved: () => void }) 
 
 /* ---------- rehearsal schedule ---------- */
 
-function RehearsalPanel({ d, onSaved }: { d: ProductionData; onSaved: () => void }) {
-  const [text, setText] = useState(d.production.rehearsal_info ?? "");
-  const [msg, setMsg] = useState("");
-  const dirty = text.trim() !== (d.production.rehearsal_info ?? "");
+function RehearsalPanel({ d }: { d: ProductionData; onSaved: () => void }) {
+  const n = d.events.length;
   return (
     <section className="panel">
       <h2 style={{ fontSize: 22 }}>Rehearsal schedule</h2>
       <p className="hint">
-        Performers see this at check-in, right above where they list their conflicts. Include the usual days and times and any
-        required dates like tech week and performances.
+        Build the rehearsal calendar in the Schedule tab. Performers see it at check-in and tap the days they can’t make.
       </p>
-      <div className="field">
-        <label htmlFor="rinfo">Schedule for performers</label>
-        <textarea
-          id="rinfo"
-          rows={5}
-          maxLength={2000}
-          value={text}
-          placeholder={"Rehearsals Mon to Thu, 6 to 9 pm, starting Nov 2\nTech week Dec 7 to 11, all required\nPerformances Dec 12 to 14"}
-          onChange={(e) => { setText(e.target.value); setMsg(""); }}
-        />
-      </div>
-      <div className="inline">
-        <button
-          className="btn primary"
-          disabled={!dirty}
-          onClick={async () => {
-            setMsg("Saving…");
-            const { error } = await supabaseBrowser().from("productions").update({ rehearsal_info: text.trim() }).eq("id", d.production.id);
-            setMsg(error ? "Not saved. Try again." : "Saved");
-            onSaved();
-          }}
-        >
-          Save schedule
-        </button>
-        <span className="saved" role="status">{dirty && !msg ? "Unsaved changes" : msg}</span>
-      </div>
+      <p>{n ? `${n} ${n === 1 ? "date" : "dates"} on the calendar.` : "No dates on the calendar yet."}</p>
+      <Link className="btn primary self-start" href={`/app/p/${d.production.id}/schedule`}>
+        {n ? "Open the schedule" : "Build the schedule"}
+      </Link>
     </section>
   );
 }
